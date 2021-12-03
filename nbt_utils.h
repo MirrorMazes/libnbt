@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libnbt.h"
+
 #include <stdio.h>
 #include <stdint.h>
 
@@ -55,5 +57,6 @@ int64_t char_to_long_s(char* input);
 float char_to_float(char* input);
 double char_to_double(char* input);
 
+int parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok);
 
 

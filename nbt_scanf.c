@@ -107,20 +107,25 @@ bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* 
         _str_len[i] = parser->nbt_data->content[tok[token_id].start + i];
     }
 
-    short str_len = char_to_short(_str_len);
+    unsigned short str_len = char_to_ushort(_str_len);
 
-    char buf[str_len + 1];
+    bool result = true;
 
     for (size_t i = 0; i < str_len; i++)
     {
-        buf[i] = parser->nbt_data->content[tok[token_id].start + 2 + i];
+        char char_1 = parser->nbt_data->content[tok[token_id].start + 2 + i];
+        
+        char char_2 = str_2[i];
+
+        if (char_1 != char_2){
+            result = false;
+            break;
+        }
+
+        if (char_1 == '\0' || char_2 == '\0') break;
     }
     
-
-    buf[str_len] = '\0';
-
-    return !strncmp(buf, str_2, str_len);
-    
+    return result;  
 }
 int nbt_get_pr_index(int current_token, struct nbt_token_t* tok)
 {
