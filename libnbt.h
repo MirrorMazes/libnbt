@@ -60,8 +60,9 @@ struct nbt_parser_t{
     int parent_token;
     int max_token;
 
-    struct nbt_metadata list_meta[NBT_MAX_NESTED_LIST];
+    struct nbt_metadata* list_meta;
     int cur_index;
+    int max_list;
     bool store_token;
 
 };

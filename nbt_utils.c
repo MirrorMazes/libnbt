@@ -7,6 +7,25 @@
 #include <byteswap.h>
 
 
+void* nbt_realloc(void* ptr, size_t new_len, size_t original_len)
+{
+    void* result = malloc(new_len);
+
+    if (!result) return result;
+
+    memset(result, 0, new_len);
+
+    if (new_len >= original_len){
+        memcpy(result, ptr, original_len);
+    }
+    else{
+        memcpy(result, ptr, new_len);
+    }
+
+    free(ptr);
+    return result;
+}
+
 void swap_char_4(char* input, char* output)
 {
     output[0] = input[3];
@@ -80,6 +99,12 @@ void nbt_fill_token(struct nbt_token_t *token, nbt_type_t type, int start, int e
 
 }
 
+void fill_meta(struct nbt_metadata* metadata, nbt_type_t type, int32_t num)
+{
+    metadata->num_of_entries = num;
+    metadata->type = type;
+}
+
 nbt_type_t nbt_return_tok_type(struct nbt_token_t* token, int index)
 {
     if (index < 0 ) return 0;
@@ -94,7 +119,7 @@ int nbt_return_tok_parent(struct nbt_token_t* token, int index)
 
 struct nbt_token_t* nbt_init_token(int init_length, struct nbt_parser_t* parser)
 {
-    struct nbt_token_t* tok = calloc(sizeof(struct nbt_token_t), init_length);
+    struct nbt_token_t* tok = calloc(sizeof(struct nbt_token_t), init_length + 1);
 
     if (tok == NULL) return NULL;
 
@@ -106,7 +131,7 @@ struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt
 {
     struct nbt_token_t* res_tok = tok;
     if (index > parser->max_token){
-        res_tok = realloc(res_tok, sizeof(struct nbt_token_t) * (parser->max_token + NBT_RESIZE_LEN));
+        res_tok = nbt_realloc(res_tok, sizeof(struct nbt_token_t) * (parser->max_token + NBT_RESIZE_LEN + 1), parser->max_list + 1);
 
         if (!res_tok) free(tok);
         if (res_tok == NULL || (parser->max_token + NBT_RESIZE_LEN) < index) return NULL;
@@ -123,4 +148,43 @@ struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser
     if (tok) free(tok);
     parser->max_token = 0;
     return NULL;
+}
+struct nbt_metadata* nbt_init_list_meta(int init_len, struct nbt_parser_t* parser)
+{
+    struct nbt_metadata* meta = calloc(sizeof(struct nbt_metadata), init_len + 1);
+
+    if (!meta) return NULL;
+
+    parser->max_list = init_len;
+    return meta;
+}
+struct nbt_metadata* nbt_add_list_meta(struct nbt_metadata* meta, int index, struct nbt_parser_t* parser, struct nbt_metadata* payload)
+{
+    struct nbt_metadata* res_meta = meta;
+
+    if (index >= parser->max_list){
+        res_meta = nbt_realloc(res_meta, sizeof(struct nbt_metadata) * (parser->max_list + NBT_META_RESIZE_LEN + 1), parser->max_list + 1);
+
+        if (!res_meta) free(meta);
+        if (!res_meta || (parser->max_list + NBT_META_RESIZE_LEN) < index) return NULL;
+
+        parser->max_list += NBT_META_RESIZE_LEN;
+    }
+    fill_meta(&res_meta[index], payload->type, payload->num_of_entries);
+
+    return res_meta;
+}
+struct nbt_metadata* nbt_destroy_list_meta(struct nbt_metadata* meta, struct nbt_parser_t* parser)
+{
+    if (meta) free(meta);
+    parser->max_list = 0;
+    return NULL;
+}
+int nbt_list_meta_return_entries(struct nbt_parser_t* parser, int index)
+{
+    if (index > parser->max_list) return NBT_WARN;
+    if (index < 0) return NBT_WARN;
+    if (!parser->list_meta) return NBT_WARN;
+
+    return parser->list_meta[index].num_of_entries;
 }

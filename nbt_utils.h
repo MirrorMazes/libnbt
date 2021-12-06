@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #define NBT_RESIZE_LEN 25
+#define NBT_META_RESIZE_LEN 10
 
 //ansi
 #define RED "\e[0;31m"
@@ -67,5 +68,11 @@ struct nbt_token_t* parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* n
 struct nbt_token_t* nbt_init_token(int init_length, struct nbt_parser_t* parser);
 struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt_parser_t* parser, const struct nbt_token_t* payload);
 struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
+
+struct nbt_metadata* nbt_init_list_meta(int init_len, struct nbt_parser_t* parser);
+struct nbt_metadata* nbt_add_list_meta(struct nbt_metadata* meta, int index, struct nbt_parser_t* parser, struct nbt_metadata* payload);
+struct nbt_metadata* nbt_destroy_list_meta(struct nbt_metadata* meta, struct nbt_parser_t* parser);
+
+int nbt_list_meta_return_entries(struct nbt_parser_t* parser, int index);
 
 
