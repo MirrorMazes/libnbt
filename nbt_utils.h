@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define NBT_RESIZE_LEN 25
+
 //ansi
 #define RED "\e[0;31m"
 #define GRN "\e[0;32m"
@@ -57,6 +59,13 @@ int64_t char_to_long_s(char* input);
 float char_to_float(char* input);
 double char_to_double(char* input);
 
-int parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok);
+nbt_type_t nbt_return_tok_type(struct nbt_token_t* token, int index);
+int nbt_return_tok_parent(struct nbt_token_t* token, int index);
+
+struct nbt_token_t* parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok);
+
+struct nbt_token_t* nbt_init_token(int init_length, struct nbt_parser_t* parser);
+struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt_parser_t* parser, const struct nbt_token_t* payload);
+struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
 
 

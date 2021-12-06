@@ -5,6 +5,7 @@
 
 #define NBT_NOT_AVAIL -3
 #define NBT_UNCHANGED -4
+#define NBT_WARN -5
 #define NBT_MAX_NESTED_LIST 30
 
 typedef enum {
@@ -57,6 +58,7 @@ struct nbt_parser_t{
 
     int current_token;
     int parent_token;
+    int max_token;
 
     struct nbt_metadata list_meta[NBT_MAX_NESTED_LIST];
     int cur_index;
