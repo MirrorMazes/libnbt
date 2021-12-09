@@ -14,15 +14,18 @@ INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CFLAGS ?= $(INC_FLAGS) -MMD -MP -std=c17 -g3 -O0 -Wvla
+LDFLAGS ?=
+
+ASAN ?= -fsanitize=address
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CC) $(OBJS) -o $@ $(LDFLAGS)
+	$(CC) $(OBJS) -o $@ $(LDFLAGS)  $(ASAN)
 
 
 # c source
 $(BUILD_DIR)/%.c.o: %.c
 	$(MKDIR_P) $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(ASAN) -c $< -o $@
 
 
 .PHONY: clean
