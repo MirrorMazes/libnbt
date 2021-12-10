@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define NBT_RESIZE_LEN 25
-#define NBT_META_RESIZE_LEN 10
+#define NBT_TOK_DEFAULT_LEN 50
+#define NBT_TOK_DEFAULT_RESIZE_LEN 25
+#define NBT_META_DEFAULT_LEN 1
+#define NBT_META_DEFAULT_RESIZE_LEN 10
 
 //ansi
 #define RED "\e[0;31m"
@@ -60,22 +62,22 @@ int64_t char_to_long_s(char* input);
 float char_to_float(char* input);
 double char_to_double(char* input);
 
-nbt_type_t nbt_return_tok_type(struct nbt_token_t* token, int index, int max);
-int nbt_return_tok_start(struct nbt_token_t* token, int index, int max);
-int nbt_return_tok_end(struct nbt_token_t* token, int index, int max);
-int nbt_return_tok_len(struct nbt_token_t* token, int index, int max);
-int nbt_return_tok_parent(struct nbt_token_t* token, int index, int max);
-
-struct nbt_token_t* parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok);
+struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok);
 
 struct nbt_token_t* nbt_init_token(int init_length, struct nbt_parser_t* parser);
-struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt_parser_t* parser, const struct nbt_token_t* payload);
+struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt_parser_t* parser, const struct nbt_token_t* payload, const int tok_resize_len);
 struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
 
-struct nbt_metadata* nbt_init_list_meta(int init_len, struct nbt_parser_t* parser);
-struct nbt_metadata* nbt_add_list_meta(struct nbt_metadata* meta, int index, struct nbt_parser_t* parser, struct nbt_metadata* payload);
-struct nbt_metadata* nbt_destroy_list_meta(struct nbt_metadata* meta, struct nbt_parser_t* parser);
+nbt_type_t nbt_tok_return_type(struct nbt_token_t* token, int index, int max);
+int nbt_tok_return_start(struct nbt_token_t* token, int index, int max);
+int nbt_tok_return_end(struct nbt_token_t* token, int index, int max);
+int nbt_tok_return_len(struct nbt_token_t* token, int index, int max);
+int nbt_tok_return_parent(struct nbt_token_t* token, int index, int max);
 
-int nbt_list_meta_return_entries(struct nbt_parser_t* parser, int index);
+struct nbt_metadata* nbt_init_meta(int init_len, struct nbt_parser_t* parser);
+struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct nbt_parser_t* parser, struct nbt_metadata* payload, const int meta_resize_len);
+struct nbt_metadata* nbt_destroy_meta(struct nbt_metadata* meta, struct nbt_parser_t* parser);
+
+int nbt_meta_return_entries(struct nbt_parser_t* parser, int index);
 
 

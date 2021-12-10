@@ -26,27 +26,6 @@ struct nbt_metadata get_nbt_metadata(struct nbt_parser_t *parser)
     return result;
 }
 
-void nbt_init_parser(struct nbt_parser_t *parser, struct nbt_sized_buffer* content)
-{
-    parser->nbt_data = content;
-
-
-    parser->current_byte = 0;
-    parser->current_token = 0;
-    parser->parent_token = NBT_NOT_AVAIL;
-    parser->max_token = 0;
-    
-    parser->cur_index = 0;
-    parser->max_list = 0;
-
-    parser->list_meta = nbt_init_list_meta(1, parser);
-
-    parser->list_meta->num_of_entries = NBT_NOT_AVAIL;
-    parser->list_meta->type = 0;
-
-    parser->store_token = true;
-}
-
 int nbt_get_identifier_len(const struct nbt_parser_t *parser)
 {
     char id_len[2];
@@ -148,7 +127,7 @@ struct nbt_token_t* nbt_parse_simple_data(struct nbt_parser_t* parser, struct nb
     int id_len = nbt_get_identifier_len(parser);
 
     struct nbt_token_t id_payload = {.type = nbt_identifier, .start = parser->current_byte, .end = parser->current_byte + id_len - 1, .len = id_len, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &id_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &id_payload, parser->setting->tok_expand_len);
 
     parser->current_token++;
     parser->current_byte += id_len;
@@ -158,7 +137,7 @@ struct nbt_token_t* nbt_parse_simple_data(struct nbt_parser_t* parser, struct nb
     int pr_len = nbt_get_primitive_len(parser, current_type);
 
     struct nbt_token_t pr_payload = {.type = nbt_primitive, .start = parser->current_byte, .end = parser->current_byte + pr_len - 1, .len = pr_len, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &pr_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &pr_payload, parser->setting->tok_expand_len);
 
     parser->current_token++;
     parser->current_byte += pr_len;
@@ -166,14 +145,14 @@ struct nbt_token_t* nbt_parse_simple_data(struct nbt_parser_t* parser, struct nb
 
     /* Fill the ID token */
     struct nbt_token_t _payload = {.type = current_type, .start = parser->current_byte - total_len, .end = parser->current_byte - 1, .len = total_len, .parent = sup_token};
-    tok = nbt_add_token(tok, parser->parent_token, parser, &_payload);
+    tok = nbt_add_token(tok, parser->parent_token, parser, &_payload, parser->setting->tok_expand_len);
 
     parser->parent_token = sup_token; // Set parent token back to the original
 
     return tok;    
 }
 
-struct nbt_token_t* nbt_parse_list_element(struct nbt_parser_t* parser, struct nbt_token_t* tok, nbt_type_t current_type)
+struct nbt_token_t* nbt_parse_element(struct nbt_parser_t* parser, struct nbt_token_t* tok, nbt_type_t current_type)
 {
     int total_len = 0;
     int sup_token = parser->parent_token; //We need to save the parent token because the ID token is filled once only
@@ -186,7 +165,7 @@ struct nbt_token_t* nbt_parse_list_element(struct nbt_parser_t* parser, struct n
     int pr_len = nbt_get_primitive_len(parser, current_type);
 
     struct nbt_token_t pr_payload = {.type = nbt_primitive, .start = parser->current_byte, .end = parser->current_byte + pr_len - 1, .len = pr_len, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &pr_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &pr_payload, parser->setting->tok_expand_len);
 
     parser->current_token++;
     parser->current_byte += pr_len;
@@ -195,28 +174,29 @@ struct nbt_token_t* nbt_parse_list_element(struct nbt_parser_t* parser, struct n
 
     /* Fill the ID token */
     struct nbt_token_t _payload = {.type = current_type, .start = parser->current_byte - total_len, .end = parser->current_byte - 1, .len = total_len, .parent = sup_token};
-    tok = nbt_add_token(tok, parser->parent_token, parser, &_payload);
+    tok = nbt_add_token(tok, parser->parent_token, parser, &_payload, parser->setting->tok_expand_len);
 
     parser->parent_token = sup_token; // Set parent token back to the original
 
     return tok;
 }
 
-struct nbt_token_t* nbt_parse_list_compound_element_start(struct nbt_parser_t* parser, struct nbt_token_t* tok)
+struct nbt_token_t* nbt_parse_element_compound_start(struct nbt_parser_t* parser, struct nbt_token_t* tok)
 {
     struct nbt_token_t _payload = {.type = nbt_compound, .start = parser->current_byte, .end = NBT_UNCHANGED, .len = NBT_UNCHANGED, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &_payload, parser->setting->tok_expand_len);
 
     parser->parent_token = parser->current_token;
     parser->current_token++;
     
     return tok;
 }
+
 struct nbt_token_t* nbt_parse_compound_start(struct nbt_parser_t* parser, struct nbt_token_t* tok)
 {
     
     struct nbt_token_t _payload = {.type = nbt_compound, .start = parser->current_byte, .end = NBT_UNCHANGED, .len = NBT_UNCHANGED, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &_payload, parser->setting->tok_expand_len);
 
     parser->current_byte++; // Increment because we expect current byte to be on the byte of the ID
 
@@ -228,7 +208,7 @@ struct nbt_token_t* nbt_parse_compound_start(struct nbt_parser_t* parser, struct
     int id_len = nbt_get_identifier_len(parser);
 
     struct nbt_token_t id_payload = {.type = nbt_identifier, .start = parser->current_byte, .end = parser->current_byte + id_len - 1, .len = id_len, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &id_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &id_payload, parser->setting->tok_expand_len);
 
     parser->current_token++;
     parser->current_byte += id_len;
@@ -239,12 +219,12 @@ struct nbt_token_t* nbt_parse_compound_start(struct nbt_parser_t* parser, struct
 
 struct nbt_token_t* nbt_parse_compound_end(struct nbt_parser_t* parser, struct nbt_token_t* tok)
 {
-    int len = parser->current_byte - nbt_return_tok_start(tok, parser->parent_token, parser->max_token) + 1;
+    int len = parser->current_byte - nbt_tok_return_start(tok, parser->parent_token, parser->max_token) + 1;
 
     struct nbt_token_t _payload = {.type = NBT_UNCHANGED, .start = NBT_UNCHANGED, .end = parser->current_byte, .len = len, .parent = NBT_UNCHANGED};
-    tok = nbt_add_token(tok, parser->parent_token, parser, &_payload);
+    tok = nbt_add_token(tok, parser->parent_token, parser, &_payload, parser->setting->tok_expand_len);
 
-    parser->parent_token = nbt_return_tok_parent(tok, parser->parent_token, parser->max_token);
+    parser->parent_token = nbt_tok_return_parent(tok, parser->parent_token, parser->max_token);
     parser->current_byte++;
 
     return tok;
@@ -253,7 +233,7 @@ struct nbt_token_t* nbt_parse_compound_end(struct nbt_parser_t* parser, struct n
 struct nbt_token_t* nbt_parse_list_start(struct nbt_parser_t* parser, struct nbt_token_t* tok)
 {
     struct nbt_token_t _payload = {.type = nbt_list, .start = parser->current_byte, .end = NBT_UNCHANGED, .len = NBT_UNCHANGED, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &_payload, parser->setting->tok_expand_len);
 
     parser->parent_token = parser->current_token;
     parser->current_token++;
@@ -263,7 +243,7 @@ struct nbt_token_t* nbt_parse_list_start(struct nbt_parser_t* parser, struct nbt
     int id_len = nbt_get_identifier_len(parser);
 
     struct nbt_token_t id_payload = {.type = nbt_identifier, .start = parser->current_byte, .end = parser->current_byte + id_len - 1, .len = id_len, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &id_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &id_payload, parser->setting->tok_expand_len);
     
     parser->current_token++;
     parser->current_byte += id_len;
@@ -271,7 +251,7 @@ struct nbt_token_t* nbt_parse_list_start(struct nbt_parser_t* parser, struct nbt
     /* Get Metadata for the list */
     struct nbt_metadata meta = get_nbt_metadata(parser);
     if (parser->list_meta[parser->cur_index].type != nbt_end) parser->cur_index++;
-    parser->list_meta = nbt_add_list_meta(parser->list_meta, parser->cur_index, parser, &meta);
+    parser->list_meta = nbt_add_meta(parser->list_meta, parser->cur_index, parser, &meta, parser->setting->list_meta_expand_len);
 
     return tok;
 }
@@ -279,38 +259,38 @@ struct nbt_token_t* nbt_parse_list_start(struct nbt_parser_t* parser, struct nbt
 struct nbt_token_t* nbt_parse_element_list_start(struct nbt_parser_t* parser, struct nbt_token_t* tok)
 {
     struct nbt_token_t _payload = {.type = nbt_list, .start = parser->current_byte, .end = NBT_UNCHANGED, .len = NBT_UNCHANGED, .parent = parser->parent_token};
-    tok = nbt_add_token(tok, parser->current_token, parser, &_payload);
+    tok = nbt_add_token(tok, parser->current_token, parser, &_payload, parser->setting->tok_expand_len);
 
     parser->parent_token = parser->current_token;
     parser->current_token++;
 
     struct nbt_metadata meta = get_nbt_metadata(parser);
-    parser->list_meta = nbt_add_list_meta(parser->list_meta, parser->cur_index, parser, &meta);
+    parser->list_meta = nbt_add_meta(parser->list_meta, parser->cur_index, parser, &meta, parser->setting->list_meta_expand_len);
 
     return tok;
 }
+
 struct nbt_token_t* nbt_parse_list_end(struct nbt_parser_t* parser, struct nbt_token_t* tok)
 {
-    int len = parser->current_byte - nbt_return_tok_start(tok, parser->parent_token, parser->max_token);
+    int len = parser->current_byte - nbt_tok_return_start(tok, parser->parent_token, parser->max_token);
 
     struct nbt_token_t _payload = {.type = NBT_UNCHANGED, .start = NBT_UNCHANGED, .end = parser->current_byte - 1, .len = len, .parent = NBT_UNCHANGED};
-    tok = nbt_add_token(tok, parser->parent_token, parser, &_payload);
+    tok = nbt_add_token(tok, parser->parent_token, parser, &_payload, parser->setting->tok_expand_len);
 
-    parser->parent_token = nbt_return_tok_parent(tok, parser->parent_token, parser->max_token);
+    parser->parent_token = nbt_tok_return_parent(tok, parser->parent_token, parser->max_token);
 
     parser->list_meta[parser->cur_index].num_of_entries = NBT_NOT_AVAIL;
 
     return tok;
 }
 
-
-struct nbt_token_t* parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok)
+struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok)
 {
     struct nbt_token_t* tok = nbt_tok;
 
     for(;;){
         char current_char;
-        if (nbt_return_tok_type(tok, parser->parent_token, parser->max_token) == nbt_list){
+        if (nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list){
             current_char = parser->list_meta[parser->cur_index].type;
         }
         else{
@@ -330,21 +310,19 @@ struct nbt_token_t* parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* n
             case nbt_long_array: {
                 // debug("In %s: type id is %d", __FUNCTION__ , current_char);
                 
-                if (nbt_return_tok_type(tok, parser->parent_token, parser->max_token) == nbt_list){
-                    tok = nbt_parse_list_element(parser, tok, current_char);
+                if (nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list){
+                    tok = nbt_parse_element(parser, tok, current_char);
                     parser->list_meta[parser->cur_index].num_of_entries--;
                 }
                 else{
                     tok = nbt_parse_simple_data(parser, tok);
                 }
-                
-
                 break;
             }
 
             case nbt_list: {
                 // debug("in nbt_list");
-                if (parser->list_meta[parser->cur_index].num_of_entries > 0 && nbt_return_tok_type(tok, parser->parent_token, parser->max_token) == nbt_list){
+                if (parser->list_meta[parser->cur_index].num_of_entries > 0 && nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list){
                     parser->cur_index++;
                     tok = nbt_parse_element_list_start(parser, tok);
                 }
@@ -356,14 +334,12 @@ struct nbt_token_t* parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* n
 
             case nbt_compound: {
                 // debug("In %s:nbt_compound", __FUNCTION__ );
-                if (nbt_return_tok_type(tok, parser->parent_token, parser->max_token) == nbt_list) {
-                    tok = nbt_parse_list_compound_element_start(parser, tok);
+                if (nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list) {
+                    tok = nbt_parse_element_compound_start(parser, tok);
                 }
                 else {
                     tok = nbt_parse_compound_start(parser, tok);
                 }    
-                
-
                 break;
             }
             //Exit point
@@ -374,9 +350,13 @@ struct nbt_token_t* parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* n
 
                 if (parser->parent_token == NBT_NOT_AVAIL) return tok;
 
-                if (nbt_return_tok_type(tok, parser->parent_token, parser->max_token) == nbt_list && parser->list_meta[parser->cur_index].num_of_entries != NBT_NOT_AVAIL) parser->list_meta[parser->cur_index].num_of_entries--;
+                if (nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list && parser->list_meta[parser->cur_index].num_of_entries != NBT_NOT_AVAIL) parser->list_meta[parser->cur_index].num_of_entries--;
                 break;
             }
+            default:
+                log_err("unknown byte %d, at position %d", current_char, parser->current_byte);
+                abort();
+                break;
         }
         bool has_list_end = false;
         int entries = nbt_list_meta_return_entries(parser, parser->cur_index);
@@ -384,12 +364,10 @@ struct nbt_token_t* parse_nbt(struct nbt_parser_t *parser, struct nbt_token_t* n
 
         while (has_list_end){
             tok = nbt_parse_list_end(parser, tok);
+            
             if (parser->cur_index > 0) parser->cur_index--;
-            if (parser->parent_token != NBT_NOT_AVAIL && nbt_return_tok_type(tok, parser->parent_token, parser->max_token) == nbt_list){
 
-                // If parent token is nbt_list
-                // It is implied that the type is nbt_list, hence decrement entries
-
+            if (parser->parent_token != NBT_NOT_AVAIL && nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list){
                 parser->list_meta[parser->cur_index].num_of_entries--;
                 if (parser->list_meta[parser->cur_index].num_of_entries > 0){
                     has_list_end = false;

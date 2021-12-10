@@ -6,7 +6,6 @@
 #define NBT_NOT_AVAIL -3
 #define NBT_UNCHANGED -4
 #define NBT_WARN -5
-#define NBT_MAX_NESTED_LIST 30
 
 typedef enum {
     nbt_end = 0,
@@ -32,6 +31,14 @@ struct nbt_sized_buffer{
     int len;
 };
 
+struct nbt_setting_t{
+    const int list_meta_init_len;
+    const int list_meta_expand_len;
+
+    const int tok_init_len;
+    const int tok_expand_len;
+};
+
 struct nbt_token_t{
     nbt_type_t type;
     int start;
@@ -45,13 +52,6 @@ struct nbt_metadata{
     int32_t num_of_entries;
 };
 
-struct nbt_list_data{
-    struct nbt_metadata list_meta[NBT_MAX_NESTED_LIST];
-    int cur_index;
-    bool directly_in_list;
-
-};
-
 struct nbt_parser_t{
     struct nbt_sized_buffer *nbt_data;
     int current_byte;
@@ -63,11 +63,14 @@ struct nbt_parser_t{
     struct nbt_metadata* list_meta;
     int cur_index;
     int max_list;
-    bool store_token;
 
+    const struct nbt_setting_t* setting;
 };
 
+/* Normal interface: WIP */
+void nbt_init_parser(struct nbt_parser_t *parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting);
+void nbt_destroy_parser(struct nbt_parser_t* parser);
+struct nbt_token_t* nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* tok, char* fmt, ...);
 
-void nbt_init_parser(struct nbt_parser_t *parser, struct nbt_sized_buffer* content);
-
-void nbt_scanf(struct nbt_parser_t* parser, char* fmt, ...);
+/* Easy interface */
+void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...);
