@@ -93,19 +93,18 @@ int nbt_get_identifier_index(int current_token, struct nbt_token_t* tok, int max
     for (size_t i = 1; i < 6; i++)
     {
         if ((current_token + i) > max_token) return NBT_WARN;
-        if (tok[current_token + i].type == nbt_identifier) return current_token + i;
+        if (nbt_return_tok_type(tok, current_token + i, max_token) == nbt_identifier) return current_token + i;
     }
-    
 }
 bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* parser, char* str_2)
 {
-    if (tok[token_id].type != nbt_identifier) return false;
+    if (nbt_return_tok_type(tok, token_id, parser->max_token) != nbt_identifier) return false;
 
     char _str_len[2];
 
     for (size_t i = 0; i < 2; i++)
     {
-        _str_len[i] = parser->nbt_data->content[tok[token_id].start + i];
+        _str_len[i] = parser->nbt_data->content[nbt_return_tok_start(tok, token_id, parser->max_token) + i];
     }
 
     unsigned short str_len = char_to_ushort(_str_len);
@@ -114,7 +113,7 @@ bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* 
 
     for (size_t i = 0; i < str_len; i++)
     {
-        char char_1 = parser->nbt_data->content[tok[token_id].start + 2 + i];
+        char char_1 = parser->nbt_data->content[nbt_return_tok_start(tok, token_id, parser->max_token) + 2 + i];
         
         char char_2 = str_2[i];
 
@@ -128,11 +127,11 @@ bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* 
     
     return result;  
 }
-int nbt_get_pr_index(int current_token, struct nbt_token_t* tok)
+int nbt_get_pr_index(int current_token, struct nbt_token_t* tok, int max_token)
 {
     for (size_t i = 1; i < 6; i++)
     {
-        if (tok[current_token + i].type == nbt_primitive) return current_token + i;
+        if (nbt_return_tok_type(tok, current_token + i, max_token) == nbt_primitive) return current_token + i;
     }
 }
 int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current_index, struct nbt_token_t* tok, struct nbt_parser_t* parser)
@@ -145,7 +144,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
 
             char output;
 
-            output = parser->nbt_data->content[tok[current_index].start];
+            output = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token)];
             
             if (out) *(char*)out = output;
             break;
@@ -156,7 +155,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[2];
             for (size_t i = 0; i < sizeof(short); i++)
             {
-                output[i] = parser->nbt_data->content[tok[current_index].start + i];
+                output[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i];
             }
             
             if (out) *(short*)out = bswap_16(char_to_short(output));
@@ -168,7 +167,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[4];
             for (size_t i = 0; i < sizeof(int); i++)
             {
-                output[i] = parser->nbt_data->content[tok[current_index].start + i];
+                output[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i];
             }
             
             if (out) *(int*)out = char_to_int(output);
@@ -180,7 +179,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[8];
             for (size_t i = 0; i < sizeof(long); i++)
             {
-                output[i] = parser->nbt_data->content[tok[current_index].start + i];
+                output[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i];
             }
             
             if (out) *(long*)out = char_to_long(output);
@@ -192,7 +191,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[4];
             for (size_t i = 0; i < sizeof(float); i++)
             {
-                output[i] = parser->nbt_data->content[tok[current_index].start + i];
+                output[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i];
             }
             float result = char_to_float(output);
             if (out) *(float*)out = result;
@@ -204,7 +203,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[8];
             for (size_t i = 0; i < sizeof(double); i++)
             {
-                output[i] = parser->nbt_data->content[tok[current_index].start + i];
+                output[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i];
             }
             double result = char_to_double(output);
             if (out) *(double*)out = result;
@@ -216,7 +215,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char _len[2];
             for (size_t i = 0; i < 2; i++)
             {
-                _len[i] = parser->nbt_data->content[tok[current_index].start + i];
+                _len[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i];
             }
             
             unsigned short len = char_to_ushort(_len);
@@ -224,7 +223,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             if (out){
                 for (size_t i = 0; i < len; i++)
                 {
-                    ((char*)out)[i] = parser->nbt_data->content[tok[current_index].start + i + 2];
+                    ((char*)out)[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i + 2];
                 }
                 ((char*)out)[len] = '\0';
             }
@@ -237,7 +236,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
                 char output[2];
                 for (size_t i = 0; i < sizeof(short); i++)
                 {
-                    output[i] = parser->nbt_data->content[tok[current_index].start + i];
+                    output[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i];
                 }
 
                 if (out) *(unsigned short*)out = char_to_ushort(output) + 1;
@@ -249,7 +248,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
                 char output[4];
                 for (size_t i = 0; i < sizeof(int); i++)
                 {
-                    output[i] = parser->nbt_data->content[tok[current_index].start + i];
+                    output[i] = parser->nbt_data->content[nbt_return_tok_start(tok, current_index, parser->max_token) + i];
                 }
                 
                 if (out) *(int*)out = char_to_int(output);
@@ -280,8 +279,8 @@ void nbt_match(struct nbt_parser_t* parser, struct fmt_extractor_t* extractor, s
             break;
         }
 
-        if (nbt_return_tok_parent(tok, i) == parent_index){
-            if (nbt_return_tok_type(tok, i) != path[current_path].type) continue;
+        if (nbt_return_tok_parent(tok, i, parser->max_token) == parent_index){
+            if (nbt_return_tok_type(tok, i, parser->max_token) != path[current_path].type) continue;
 
             int id = nbt_get_identifier_index(i, tok, max_token);
             if (id == NBT_WARN) continue;
@@ -297,15 +296,15 @@ void nbt_match(struct nbt_parser_t* parser, struct fmt_extractor_t* extractor, s
     /* Get the primitive token and store data */
     for (; i < max_token; i++)
     {
-        if (nbt_return_tok_parent(tok, i) == parent_index){
+        if (nbt_return_tok_parent(tok, i, parser->max_token) == parent_index){
             int id = nbt_get_identifier_index(i, tok, max_token);
             if (id == NBT_WARN) continue;
             // debug("id is %d", id);
             if (!nbt_cmp_tok_id(id, tok, parser, pr_name)) continue;
 
-            nbt_type_t type = tok[i].type;
+            nbt_type_t type = nbt_return_tok_type(tok, i, parser->max_token);
 
-            i = nbt_get_pr_index(i, tok);
+            i = nbt_get_pr_index(i, tok, parser->max_token);
             if (nbt_store_pr(out, mode, mode_2, type, i, tok, parser) == -1) log_warn("primitive not supported");
             break;
         }

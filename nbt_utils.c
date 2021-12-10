@@ -105,15 +105,29 @@ void fill_meta(struct nbt_metadata* metadata, nbt_type_t type, int32_t num)
     metadata->type = type;
 }
 
-nbt_type_t nbt_return_tok_type(struct nbt_token_t* token, int index)
+nbt_type_t nbt_return_tok_type(struct nbt_token_t* token, int index, int max)
 {
-    if (index < 0 ) return 0;
+    if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].type;
 }
-int nbt_return_tok_parent(struct nbt_token_t* token, int index)
+int nbt_return_tok_start(struct nbt_token_t* token, int index, int max)
 {
-    if (index < 0 ) return NBT_WARN;
-    if (!token) return NBT_WARN;
+    if (index < 0 || index > max || !token) return NBT_WARN;
+    return token[index].start;
+}
+int nbt_return_tok_end(struct nbt_token_t* token, int index, int max)
+{
+    if (index < 0 || index > max || !token) return NBT_WARN;
+    return token[index].end;
+}
+int nbt_return_tok_len(struct nbt_token_t* token, int index, int max)
+{
+    if (index < 0 || index > max || !token) return NBT_WARN;
+    return token[index].len;
+}
+int nbt_return_tok_parent(struct nbt_token_t* token, int index, int max)
+{
+    if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].parent;
 }
 
