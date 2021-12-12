@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 #include <byteswap.h>
 
 #define MAX_LOOKUP 20
@@ -31,7 +32,9 @@
 
 struct nbt_lookup_t{
     nbt_type_t type;
-    char name[MAX_NAME_LEN];
+    char name[MAX_NAME_LEN + 1];
+
+    int index;
 };
 
 struct fmt_extractor_t{
@@ -40,13 +43,14 @@ struct fmt_extractor_t{
     int lookup_max;
 };
 
-void store_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t* lookup, char* fmt, nbt_type_t type)
+void store_compound_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t* lookup, char* fmt)
 {
+    /* Get the name of the compound */
     char key[MAX_NAME_LEN + 1];
     for (size_t i = 0; i < MAX_NAME_LEN; i++)
     {
         char current_char = fmt[extractor->current_byte + i];
-        if (current_char == '}' || current_char == ']'){
+        if (current_char == '}'){
             key[i] = '\0';
             extractor->current_byte += (i + 1);
             break;
@@ -55,10 +59,66 @@ void store_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t* lookup, c
     }
     key[MAX_NAME_LEN] = '\0';
 
-    strncpy(lookup[extractor->lookup_index].name, key, MAX_NAME_LEN); 
-    lookup[extractor->lookup_index].type = type;
+    strncpy(lookup[extractor->lookup_index].name, key, MAX_NAME_LEN + 1); 
+    lookup[extractor->lookup_index].type = nbt_compound;
     extractor->lookup_max++;
     extractor->lookup_index++;   
+}
+
+void store_list_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t* lookup, char* fmt)
+{
+    /* Get the name of the list */
+    char key[MAX_NAME_LEN + 1];
+    for (size_t i = 0; i < MAX_NAME_LEN; i++)
+    {
+        char current_char = fmt[extractor->current_byte + i];
+        if (current_char == ']')
+        {
+            key[i] = '\0';
+            extractor->current_byte += (i + 1);
+            break;
+        }
+        key[i] = current_char;
+        
+    }
+    key[MAX_NAME_LEN] = '\0';
+
+    strncpy(lookup[extractor->lookup_index].name, key, MAX_NAME_LEN + 1);
+    lookup[extractor->lookup_index].type = nbt_list;
+    
+
+    if (fmt[extractor->current_byte] != ':'){
+        lookup[extractor->lookup_index].index = 0;
+        extractor->lookup_max++;
+        extractor->lookup_index++;
+        return;
+    }    
+    extractor->current_byte++;
+
+    /* Get the number of the list */
+    char num[6];
+    int count = 0;
+    for (size_t i = 0; i < 6; i++)
+    {
+        char current_char = fmt[extractor->current_byte + i];
+        if (!isdigit(current_char)) break;
+        count++;
+    }
+    int padding = 6 - count - 1;
+    
+    for (size_t i = 0; i < count; i++)
+    {
+        num[padding + i] = fmt[extractor->current_byte + i];
+    }
+
+    long result = strtol(num, NULL, 0);
+
+    extractor->current_byte += count;
+
+    lookup[extractor->lookup_index].index = result;
+
+    extractor->lookup_max++;
+    extractor->lookup_index++;
 }
 
 void clear_path(struct fmt_extractor_t* extractor, struct nbt_lookup_t* lookup)
@@ -275,6 +335,17 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
                 
             }
 
+            if (mode_2 == 't'){// List
+                if (type != nbt_identifier) return -1;
+
+                char output[4];
+                for (size_t i = 0; i < sizeof(int); i++)
+                {
+                    output[i] = parser->nbt_data->content[nbt_tok_return_end(tok, current_index, parser->max_token) + 2 + i];
+                }
+                if (out) *(int*)out = char_to_int(output);
+            }
+
             break;
         }    
         default:
@@ -314,19 +385,26 @@ void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extracto
         }
     }
     if (!store_data) return;
+
     /* Get the primitive token and store data */
     for (; i < max_token; i++)
     {
         if (nbt_tok_return_parent(tok, i, parser->max_token) == parent_index){
+
             int id = nbt_get_identifier_index(i, tok, max_token);
             if (id == NBT_WARN) continue;
-            // debug("id is %d", id);
+
             if (!nbt_cmp_tok_id(id, tok, parser, pr_name)) continue;
 
             nbt_type_t type = nbt_tok_return_type(tok, i, parser->max_token);
 
-            i = nbt_get_pr_index(i, tok, parser->max_token);
-            if (nbt_store_pr(out, mode, mode_2, type, i, tok, parser) == -1) log_warn("primitive not supported");
+            if (type == nbt_list) { // For list, the number of indexes is prefixed after the identifier, so we pass in the identifier token
+                if (nbt_store_pr(out, mode, mode_2, nbt_identifier, id, tok, parser) == -1) log_warn("Incompatible list query");
+            }
+            else {
+                i = nbt_get_pr_index(i, tok, parser->max_token);
+                if (nbt_store_pr(out, mode, mode_2, type, i, tok, parser) == -1) log_warn("primitive not supported");
+            }    
             break;
         }
     }
@@ -386,12 +464,12 @@ void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
        
         case '{': // nbt_compound
             extractor.current_byte++;
-            store_key(&extractor, &path, fmt, nbt_compound);
+            store_compound_key(&extractor, &path, fmt);
 
             break;
         case '[': // nbt_list
             extractor.current_byte++;
-            store_key(&extractor, &path, fmt, nbt_list);
+            store_list_key(&extractor, &path, fmt);
 
             break;
         case '\'':{ // identifier of primitive
@@ -481,12 +559,12 @@ struct nbt_token_t* nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t*
        
         case '{': // nbt_compound
             extractor.current_byte++;
-            store_key(&extractor, &path, fmt, nbt_compound);
+            store_compound_key(&extractor, &path, fmt);
 
             break;
         case '[': // nbt_list
             extractor.current_byte++;
-            store_key(&extractor, &path, fmt, nbt_list);
+            store_list_key(&extractor, &path, fmt);
 
             break;
         case '\'':{ // identifier of primitive
