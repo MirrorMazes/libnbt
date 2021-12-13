@@ -1,7 +1,7 @@
 # Libnbt
 A library to work with [NBT](https://wiki.vg/NBT), written in C.
 
-This library is a WIP, and functionalities like accessing lists has yet been added.
+This library is a WIP, and there may be bugs, especially if the operation includes lists.
 
 ## Usage
 There are two interfaces you can use in this library, the simple interface and the normal interface.
@@ -23,7 +23,7 @@ For functions to extract NBT data, the following format strings are available:
 - Number of bytes in a byte array: `%nb`
 - Number of integers in an integer array: `%ni`
 - Number of longs in a long array: `%nl`
-- Number of elements in a list: `%nt` (WIP: Only works for root lists --- Lists that aren't in another list)
+- Number of elements in a list: `%nt`
 
 More will be added as support for tags expand.
 
@@ -31,7 +31,7 @@ More will be added as support for tags expand.
 For extracting NBT, there is a simple way to express the path to the data.
 
 1. Name of a compound is enclosed by `{}`
-2. Name of a list is enclosed by `[]` (WIP)
+2. Name of a list is enclosed by `[]:x`, where x is the index of the element to access.
 3. Name of the data to be accessed is enclosed by `''`
 
 For example, to access a short called `shortTest`, which is enclosed by a compound called `Level`, the path would be `[Level]'shortTest'`.

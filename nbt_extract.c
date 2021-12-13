@@ -34,7 +34,7 @@ struct nbt_lookup_t{
     nbt_type_t type;
     char name[MAX_NAME_LEN + 1];
 
-    int index;
+    long index;
 };
 
 struct fmt_extractor_t{
@@ -96,7 +96,9 @@ void store_list_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t* look
     extractor->current_byte++;
 
     /* Get the number of the list */
-    char num[6];
+    char num[6 + 1];
+    memset(num, (char)48, 6);
+
     int count = 0;
     for (size_t i = 0; i < 6; i++)
     {
@@ -104,21 +106,33 @@ void store_list_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t* look
         if (!isdigit(current_char)) break;
         count++;
     }
-    int padding = 6 - count - 1;
+
+    int padding = 6 - count;
     
     for (size_t i = 0; i < count; i++)
     {
         num[padding + i] = fmt[extractor->current_byte + i];
     }
+    num[6] = '\0';
 
-    long result = strtol(num, NULL, 0);
-
+    long result = strtol(num, NULL, 10);
+    // debug("result is %ld", result);
+    
     extractor->current_byte += count;
 
     lookup[extractor->lookup_index].index = result;
 
     extractor->lookup_max++;
     extractor->lookup_index++;
+}
+
+bool check_if_in_list(struct nbt_lookup_t* lookup, int index)
+{
+    if (index <= 0) return false;
+
+    if (lookup[index - 1].type != nbt_list) return false;
+
+    return true;
 }
 
 void clear_path(struct fmt_extractor_t* extractor, struct nbt_lookup_t* lookup)
@@ -354,7 +368,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
     return 0;
 }
 
-void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extractor, struct nbt_lookup_t* path, struct nbt_token_t* tok, char* pr_name, char mode, char mode_2, void* out, int max_token)
+void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extractor, struct nbt_lookup_t* path, struct nbt_token_t* tok, char* pr_name, char mode, char mode_2, void* out)
 {
     int parent_index = NBT_NOT_AVAIL;
     int current_path = 0;
@@ -364,34 +378,48 @@ void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extracto
 
     /* Get the parent token of the primitive */
     size_t i = 0;
-    for (; i < max_token; i++)
+    for (; i < parser->max_token; i++)
     {
         if (current_path >= extractor->lookup_max){
             store_data = true;
             break;
         }
 
-        if (nbt_tok_return_parent(tok, i, parser->max_token) == parent_index){
-            if (nbt_tok_return_type(tok, i, parser->max_token) != path[current_path].type) continue;
+        if (nbt_tok_return_parent(tok, i, parser->max_token) != parent_index) continue;
+        if (nbt_tok_return_type(tok, i, parser->max_token) != path[current_path].type) continue;
+        
+        if (check_if_in_list(path, current_path) == false){ // Current token is not in a list
 
-            int id = nbt_get_identifier_index(i, tok, max_token);
+            /* Check the name of the token */
+            int id = nbt_get_identifier_index(i, tok, parser->max_token);
             if (id == NBT_WARN) continue;
 
             if (!nbt_cmp_tok_id(id, tok, parser, path[current_path].name)) continue;
 
             current_path++;
             parent_index = i;
-            i = id;
         }
+        else{ // Current token is in a list
+            /* Check the number of tokens to skip */
+
+            // debug("List detected. Current path %d");
+            if (path[current_path - 1].index <= 0){
+                current_path++;
+                parent_index = i;
+                continue;
+            }
+            path[current_path - 1].index--;
+        }    
+        
     }
     if (!store_data) return;
 
     /* Get the primitive token and store data */
-    for (; i < max_token; i++)
+    for (; i < parser->max_token; i++)
     {
         if (nbt_tok_return_parent(tok, i, parser->max_token) == parent_index){
 
-            int id = nbt_get_identifier_index(i, tok, max_token);
+            int id = nbt_get_identifier_index(i, tok, parser->max_token);
             if (id == NBT_WARN) continue;
 
             if (!nbt_cmp_tok_id(id, tok, parser, pr_name)) continue;
@@ -403,7 +431,7 @@ void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extracto
             }
             else {
                 i = nbt_get_pr_index(i, tok, parser->max_token);
-                if (nbt_store_pr(out, mode, mode_2, type, i, tok, parser) == -1) log_warn("primitive not supported");
+                if (nbt_store_pr(out, mode, mode_2, type, i, tok, parser) == -1) log_warn("primitive not supported. Mode set %c, but type is %d", mode, type);
             }    
             break;
         }
@@ -485,7 +513,7 @@ void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
             }   
 
             void* out = va_arg(ap, void*);
-            nbt_match_tok(&parser, &extractor, path, tok, key, format, format_2, out, parser.max_token);
+            nbt_match_tok(&parser, &extractor, path, tok, key, format, format_2, out);
 
             clear_path(&extractor, path); // destroy all the elements stored in the path
 
@@ -580,7 +608,7 @@ struct nbt_token_t* nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t*
             }   
 
             void* out = va_arg(ap, void*);
-            nbt_match_tok(parser, &extractor, path, tok, key, format, format_2, out, parser->max_token);
+            nbt_match_tok(parser, &extractor, path, tok, key, format, format_2, out);
 
             clear_path(&extractor, path); // destroy all the elements stored in the path
 
