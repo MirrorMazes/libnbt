@@ -85,10 +85,23 @@ struct nbt_parser_t{
     const struct nbt_setting_t* setting;
 };
 
-/* Normal interface: WIP */
-void nbt_init_parser(struct nbt_parser_t *parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting);
+/* Normal interface */
+
+// Parser util functions: in nbt_utils.c
+void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting);
+void nbt_clear_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content);
 void nbt_destroy_parser(struct nbt_parser_t* parser);
-struct nbt_token_t* nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* tok, char* fmt, ...);
+
+// Token util functions: in nbt_utils.c
+struct nbt_token_t* nbt_init_token(struct nbt_parser_t* parser);
+void nbt_clear_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
+struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
+
+// Tokenise NBT: in nbt_tok.c
+struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok);
+
+// Extract NBT: in nbt_extract.c
+void nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* tok, char* fmt, ...);
 
 /* Easy interface */
 void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...);

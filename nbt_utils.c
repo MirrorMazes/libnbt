@@ -51,6 +51,7 @@ void swap_char_4(char* input, char* output)
     output[2] = input[1];
     output[3] = input[0];
 }
+
 void swap_char_8(char* input, char* output)
 {
     output[0] = input[7];
@@ -62,6 +63,7 @@ void swap_char_8(char* input, char* output)
     output[6] = input[1];
     output[7] = input[0];
 }
+
 uint16_t char_to_ushort(char* input)
 {
     int16_t result;
@@ -75,12 +77,14 @@ int16_t char_to_short(char* input)
     memcpy(&result, input, sizeof(uint16_t));
     return bswap_16(result);
 }
+
 int32_t char_to_int(char* input)
 {
     int32_t result;
     memcpy(&result, input, sizeof(int32_t));
     return bswap_32(result);
 }
+
 int64_t char_to_long(char* input)
 {
     int64_t result;
@@ -97,6 +101,7 @@ float char_to_float(char* input)
 
     return result;
 }
+
 double char_to_double(char* input)
 {
     double result;
@@ -128,31 +133,34 @@ nbt_type_t nbt_tok_return_type(struct nbt_token_t* token, int index, int max)
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].type;
 }
+
 int nbt_tok_return_start(struct nbt_token_t* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].start;
 }
+
 int nbt_tok_return_end(struct nbt_token_t* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].end;
 }
+
 int nbt_tok_return_len(struct nbt_token_t* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].len;
 }
+
 int nbt_tok_return_parent(struct nbt_token_t* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].parent;
 }
 
-void nbt_init_parser(struct nbt_parser_t *parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting)
+void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting)
 {
     parser->nbt_data = content;
-
 
     parser->current_byte = 0;
     parser->current_token = 0;
@@ -170,6 +178,22 @@ void nbt_init_parser(struct nbt_parser_t *parser, struct nbt_sized_buffer* conte
     parser->setting = setting;
 }
 
+void nbt_clear_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content)
+{
+    parser->current_byte = 0;
+    parser->current_token = 0;
+    parser->parent_token = NBT_NOT_AVAIL;
+
+    parser->cur_index = 0;
+
+    memset(parser->list_meta, 0, sizeof(struct nbt_metadata) * parser->max_list);
+
+    parser->list_meta->num_of_entries = NBT_NOT_AVAIL;
+    parser->list_meta->type = 0;
+
+    parser->nbt_data = content;
+}
+
 void nbt_destroy_parser(struct nbt_parser_t* parser)
 {
     free(parser->list_meta);
@@ -177,13 +201,13 @@ void nbt_destroy_parser(struct nbt_parser_t* parser)
     parser->max_list = 0;
 }
 
-struct nbt_token_t* nbt_init_token(int init_length, struct nbt_parser_t* parser)
+struct nbt_token_t* nbt_init_token(struct nbt_parser_t* parser)
 {
-    struct nbt_token_t* tok = calloc(sizeof(struct nbt_token_t), init_length + 1);
+    struct nbt_token_t* tok = calloc(sizeof(struct nbt_token_t), parser->setting->tok_init_len + 1);
 
     if (tok == NULL) return NULL;
 
-    parser->max_token = init_length;
+    parser->max_token = parser->setting->tok_init_len;
     return tok;
 }
 
@@ -202,12 +226,20 @@ struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt
     return res_tok;
 }
 
+void nbt_clear_token(struct nbt_token_t* tok, struct nbt_parser_t* parser)
+{
+    memset(tok, 0, parser->max_token);
+}
+
 struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser_t* parser)
 {
-    if (tok) free(tok);
+    if (!tok) return tok;
+
+    free(tok);
     parser->max_token = 0;
     return NULL;
 }
+
 struct nbt_metadata* nbt_init_meta(int init_len, struct nbt_parser_t* parser)
 {
     struct nbt_metadata* meta = calloc(sizeof(struct nbt_metadata), init_len + 1);
@@ -217,6 +249,7 @@ struct nbt_metadata* nbt_init_meta(int init_len, struct nbt_parser_t* parser)
     parser->max_list = init_len;
     return meta;
 }
+
 struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct nbt_parser_t* parser, struct nbt_metadata* payload, const int meta_resize_len)
 {
     struct nbt_metadata* res_meta = meta;
@@ -233,12 +266,14 @@ struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct n
 
     return res_meta;
 }
+
 struct nbt_metadata* nbt_destroy_meta(struct nbt_metadata* meta, struct nbt_parser_t* parser)
 {
     if (meta) free(meta);
     parser->max_list = 0;
     return NULL;
 }
+
 int nbt_list_meta_return_entries(struct nbt_parser_t* parser, int index)
 {
     if (index > parser->max_list) return NBT_WARN;

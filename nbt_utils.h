@@ -80,11 +80,8 @@ int64_t char_to_long_s(char* input);
 float char_to_float(char* input);
 double char_to_double(char* input);
 
-struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok);
 
-struct nbt_token_t* nbt_init_token(int init_length, struct nbt_parser_t* parser);
 struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt_parser_t* parser, const struct nbt_token_t* payload, const int tok_resize_len);
-struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
 
 nbt_type_t nbt_tok_return_type(struct nbt_token_t* token, int index, int max);
 int nbt_tok_return_start(struct nbt_token_t* token, int index, int max);

@@ -374,6 +374,7 @@ void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extracto
     int current_path = 0;
     int current_token = 0;
     bool store_data = false;
+    bool pr_is_element = false;
     nbt_type_t current_type = path[0].type;
 
     /* Get the parent token of the primitive */
@@ -413,7 +414,7 @@ void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extracto
         
     }
     if (!store_data) return;
-
+    
     /* Get the primitive token and store data */
     for (; i < parser->max_token; i++)
     {
@@ -446,7 +447,7 @@ void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
     nbt_init_parser(&parser, content, &setting);
     
     /*initialise token */
-    struct nbt_token_t* tok = nbt_init_token(setting.tok_init_len, &parser);
+    struct nbt_token_t* tok = nbt_init_token(&parser);
 
     /* Fill up the token */
     tok = nbt_tokenise(&parser, tok);
@@ -536,18 +537,15 @@ void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
     va_end(ap);
 }
 
-struct nbt_token_t* nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* token, char* fmt, ...)
+void nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* token, char* fmt, ...)
 {
     struct nbt_token_t* tok = token;
 
-    /* Fill up the token */
-    tok = nbt_tokenise(parser, tok);
-
     /* Debugging: printing out the token */
-    // for (size_t i = 0; i < parser->max_token; i++)
-    // {
-    //     debug("%d: type: %d, start: %d, end: %d, len: %d, parent: %d", i, tok[i].type, tok[i].start, tok[i].end, tok[i].len, tok[i].parent);
-    // }
+    for (size_t i = 0; i < parser->max_token; i++)
+    {
+        debug("%d: type: %d, start: %d, end: %d, len: %d, parent: %d", i, tok[i].type, tok[i].start, tok[i].end, tok[i].len, tok[i].parent);
+    }
     
 
     struct nbt_lookup_t path[MAX_LOOKUP];
@@ -625,5 +623,4 @@ struct nbt_token_t* nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t*
     }
     va_end(ap);
 
-    return tok;
 }
