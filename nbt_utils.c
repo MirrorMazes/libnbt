@@ -33,7 +33,7 @@ void* nbt_realloc(void* ptr, size_t new_len, size_t original_len)
 
     memset(result, 0, new_len);
 
-    if (new_len >= original_len){
+    if (new_len >= original_len) {
         memcpy(result, ptr, original_len);
     }
     else{
@@ -158,7 +158,7 @@ int nbt_tok_return_parent(struct nbt_token_t* token, int index, int max)
     return token[index].parent;
 }
 
-void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting)
+void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_parser_setting_t* setting)
 {
     parser->nbt_data = content;
 
@@ -214,7 +214,7 @@ struct nbt_token_t* nbt_init_token(struct nbt_parser_t* parser)
 struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt_parser_t* parser, const struct nbt_token_t* payload, const int tok_resize_len)
 {
     struct nbt_token_t* res_tok = tok;
-    if (index > parser->max_token){
+    if (index > parser->max_token) {
         res_tok = nbt_realloc(res_tok, sizeof(struct nbt_token_t) * (parser->max_token + tok_resize_len + 1), sizeof(struct nbt_token_t) * (parser->max_token + 1));
 
         if (res_tok == NULL || (parser->max_token + tok_resize_len) < index) return NULL;
@@ -254,7 +254,7 @@ struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct n
 {
     struct nbt_metadata* res_meta = meta;
 
-    if (index >= parser->max_list){
+    if (index >= parser->max_list) {
         res_meta = nbt_realloc(res_meta, sizeof(struct nbt_metadata) * (parser->max_list + meta_resize_len + 1), sizeof(struct nbt_metadata) * (parser->max_list + 1));
 
         if (!res_meta) free(meta);
@@ -274,7 +274,7 @@ struct nbt_metadata* nbt_destroy_meta(struct nbt_metadata* meta, struct nbt_pars
     return NULL;
 }
 
-int nbt_list_meta_return_entries(struct nbt_parser_t* parser, int index)
+int nbt_meta_return_entries(struct nbt_parser_t* parser, int index)
 {
     if (index > parser->max_list) return NBT_WARN;
     if (index < 0) return NBT_WARN;

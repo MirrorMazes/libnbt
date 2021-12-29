@@ -49,12 +49,16 @@ struct nbt_sized_buffer{
     int len;
 };
 
-struct nbt_setting_t{
+struct nbt_parser_setting_t{
     const int list_meta_init_len;
     const int list_meta_expand_len;
 
     const int tok_init_len;
     const int tok_expand_len;
+};
+
+struct nbt_injector_setting_t{
+    const int nbt_data_init_len;
 };
 
 struct nbt_token_t{
@@ -82,13 +86,21 @@ struct nbt_parser_t{
     int cur_index;
     int max_list;
 
-    const struct nbt_setting_t* setting;
+    const struct nbt_parser_setting_t* setting;
+};
+
+
+struct nbt_injector_t{
+    struct nbt_sized_buffer nbt_data;
+    int nbt_size;
+
+    struct nbt_injector_setting_t* setting;
 };
 
 /* Normal interface */
 
 // Parser util functions: in nbt_utils.c
-void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting);
+void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_parser_setting_t* setting);
 void nbt_clear_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content);
 void nbt_destroy_parser(struct nbt_parser_t* parser);
 

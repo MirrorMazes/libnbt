@@ -27,7 +27,7 @@
 
 
 
-struct nbt_metadata get_nbt_metadata(struct nbt_parser_t *parser)
+struct nbt_metadata get_nbt_metadata(struct nbt_parser_t* parser)
 {
     struct nbt_metadata result;
 
@@ -35,7 +35,8 @@ struct nbt_metadata get_nbt_metadata(struct nbt_parser_t *parser)
     parser->current_byte++;
 
     char entries[4];
-    for (int i = 0; i < 4; i++){
+    for (int i = 0; i < 4; i++)
+    {
         entries[3 - i] = parser->nbt_data->content[parser->current_byte + i];
     }
     result.num_of_entries = (int32_t)*entries;
@@ -44,7 +45,7 @@ struct nbt_metadata get_nbt_metadata(struct nbt_parser_t *parser)
     return result;
 }
 
-int nbt_get_identifier_len(const struct nbt_parser_t *parser)
+int nbt_get_identifier_len(const struct nbt_parser_t* parser)
 {
     char id_len[2];
 
@@ -80,9 +81,10 @@ int nbt_get_primitive_len(const struct nbt_parser_t *parser, const nbt_type_t ty
             len = 8;
             break;
 
-        case nbt_byte_array:{
+        case nbt_byte_array: {
             char pr_len_ba[4];
-            for (int i = 0; i < 4; i++){
+            for (int i = 0; i < 4; i++)
+            {
                 pr_len_ba[i] = parser->nbt_data->content[parser->current_byte + i];
             }
             len = char_to_int(pr_len_ba) + 4;
@@ -90,7 +92,7 @@ int nbt_get_primitive_len(const struct nbt_parser_t *parser, const nbt_type_t ty
             break;
         }
 
-        case nbt_string:{
+        case nbt_string: {
             char pr_len_str[2];
             pr_len_str[0] = parser->nbt_data->content[parser->current_byte];
             pr_len_str[1] = parser->nbt_data->content[parser->current_byte + 1];
@@ -99,7 +101,8 @@ int nbt_get_primitive_len(const struct nbt_parser_t *parser, const nbt_type_t ty
 
             break;
         }
-        case nbt_int_array:{
+
+        case nbt_int_array: {
             char pr_len_int_arr[4];
             for (int i = 0; i < 4; i++) {
                 pr_len_int_arr[i] = parser->nbt_data->content[parser->current_byte + i];
@@ -108,7 +111,8 @@ int nbt_get_primitive_len(const struct nbt_parser_t *parser, const nbt_type_t ty
 
             break;
         }
-        case nbt_long_array:{
+
+        case nbt_long_array: {
             char pr_len_long_arr[4];
             for (int i = 0; i < 4; i++) {
                 pr_len_long_arr[i] = parser->nbt_data->content[parser->current_byte + i];
@@ -306,12 +310,13 @@ struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t
 {
     struct nbt_token_t* tok = nbt_tok;
 
-    for(;;){
+    for(;;)
+    {
         char current_char;
-        if (nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list){
+        if (nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list) {
             current_char = parser->list_meta[parser->cur_index].type;
         }
-        else{
+        else {
             current_char = parser->nbt_data->content[parser->current_byte];
         }
         // debug("current char is %d, index is %d", current_char, parser->current_byte);
@@ -328,11 +333,11 @@ struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t
             case nbt_long_array: {
                 // debug("In %s: type id is %d", __FUNCTION__ , current_char);
                 
-                if (nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list){
+                if (nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list) {
                     tok = nbt_parse_element(parser, tok, current_char);
                     parser->list_meta[parser->cur_index].num_of_entries--;
                 }
-                else{
+                else {
                     tok = nbt_parse_simple_data(parser, tok);
                 }
                 break;
@@ -340,7 +345,7 @@ struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t
 
             case nbt_list: {
                 // debug("in nbt_list");
-                if (parser->list_meta[parser->cur_index].num_of_entries > 0 && nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list){
+                if (parser->list_meta[parser->cur_index].num_of_entries > 0 && nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list) {
                     parser->cur_index++;
                     tok = nbt_parse_element_list_start(parser, tok);
                 }
@@ -360,7 +365,7 @@ struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t
                 }    
                 break;
             }
-            //Exit point
+            /* Exit point */
             case nbt_end: {
                 // debug("In %s:nbt_end",__FUNCTION__ );
 
@@ -373,21 +378,23 @@ struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t
             }
             default:
                 log_err("unknown byte %d, at position %d", current_char, parser->current_byte);
-                abort();
+                abort(); /* @TODO: return an error code instead of aborting */
                 break;
         }
+
         bool has_list_end = false;
-        int entries = nbt_list_meta_return_entries(parser, parser->cur_index);
+        int entries = nbt_meta_return_entries(parser, parser->cur_index);
         if (entries == 0 && parser->parent_token != NBT_NOT_AVAIL) has_list_end = true;
 
-        while (has_list_end){
+        while (has_list_end)
+        {
             tok = nbt_parse_list_end(parser, tok);
             
             if (parser->cur_index > 0) parser->cur_index--;
 
-            if (parser->parent_token != NBT_NOT_AVAIL && nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list){
+            if (parser->parent_token != NBT_NOT_AVAIL && nbt_tok_return_type(tok, parser->parent_token, parser->max_token) == nbt_list) {
                 parser->list_meta[parser->cur_index].num_of_entries--;
-                if (parser->list_meta[parser->cur_index].num_of_entries > 0){
+                if (parser->list_meta[parser->cur_index].num_of_entries > 0) {
                     has_list_end = false;
                 }
             }

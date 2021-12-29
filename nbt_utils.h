@@ -69,6 +69,8 @@
 #define log_info(args, ...)
 #endif
 
+void* nbt_realloc(void* ptr, size_t new_len, size_t original_len);
+
 void swap_char_4(char* input, char* output);
 void swap_char_8(char* input, char* output);
 
