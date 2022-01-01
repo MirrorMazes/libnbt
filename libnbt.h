@@ -21,10 +21,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define NBT_NOT_AVAIL -3
-#define NBT_UNCHANGED -4
-#define NBT_WARN -5
-
 typedef enum {
     nbt_end = 0,
     nbt_byte = 1,
@@ -44,12 +40,12 @@ typedef enum {
     nbt_primitive = -2
 } nbt_type_t;
 
-struct nbt_sized_buffer{
+struct nbt_sized_buffer {
     char* content;
     int len;
 };
 
-struct nbt_parser_setting_t{
+struct nbt_parser_setting_t {
     const int list_meta_init_len;
     const int list_meta_expand_len;
 
@@ -57,45 +53,13 @@ struct nbt_parser_setting_t{
     const int tok_expand_len;
 };
 
-struct nbt_injector_setting_t{
+struct nbt_injector_setting_t {
     const int nbt_data_init_len;
 };
 
-struct nbt_token_t{
-    nbt_type_t type;
-    int start;
-    int end;
-    int len;
-    int parent;
-};
+struct nbt_metadata;
 
-struct nbt_metadata{
-    nbt_type_t type;
-    int32_t num_of_entries;
-};
-
-struct nbt_parser_t{
-    struct nbt_sized_buffer *nbt_data;
-    int current_byte;
-
-    int current_token;
-    int parent_token;
-    int max_token;
-
-    struct nbt_metadata* list_meta;
-    int cur_index;
-    int max_list;
-
-    const struct nbt_parser_setting_t* setting;
-};
-
-
-struct nbt_injector_t{
-    struct nbt_sized_buffer nbt_data;
-    int nbt_size;
-
-    struct nbt_injector_setting_t* setting;
-};
+struct nbt_parser_t;
 
 /* Normal interface */
 
@@ -104,16 +68,11 @@ void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* conte
 void nbt_clear_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content);
 void nbt_destroy_parser(struct nbt_parser_t* parser);
 
-// Token util functions: in nbt_utils.c
-struct nbt_token_t* nbt_init_token(struct nbt_parser_t* parser);
-void nbt_clear_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
-struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
-
 // Tokenise NBT: in nbt_tok.c
-struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok);
+int nbt_tokenise(struct nbt_parser_t *parser);
 
 // Extract NBT: in nbt_extract.c
-void nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* tok, char* fmt, ...);
+int nbt_extract(struct nbt_parser_t* parser, char* fmt, ...);
 
 /* Easy interface */
-void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...);
+int nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...);

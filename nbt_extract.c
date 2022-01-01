@@ -50,13 +50,15 @@ struct nbt_match_t{
     void* pr;
 };
 
-void store_compound_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t lookup[], char* fmt)
+static int store_compound_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t lookup[], char* fmt)
 {
     /* Get the name of the compound */
     char key[MAX_NAME_LEN + 1];
     for (size_t i = 0; i < MAX_NAME_LEN; i++)
     {
         char current_char = fmt[extractor->current_byte + i];
+        if (current_char == '\0') return -1;
+
         if (current_char == '}') {
             key[i] = '\0';
             extractor->current_byte += (i + 1);
@@ -69,16 +71,20 @@ void store_compound_key(struct fmt_extractor_t *extractor, struct nbt_lookup_t l
     strncpy(lookup[extractor->lookup_index].name, key, MAX_NAME_LEN + 1); 
     lookup[extractor->lookup_index].type = nbt_compound;
     extractor->lookup_max++;
-    extractor->lookup_index++;   
+    extractor->lookup_index++;
+
+    return 0;   
 }
 
-void store_list_key(struct fmt_extractor_t* extractor, struct nbt_lookup_t lookup[], char* fmt)
+static int store_list_key(struct fmt_extractor_t* extractor, struct nbt_lookup_t lookup[], char* fmt)
 {
     /* Get the name of the list */
     char key[MAX_NAME_LEN + 1];
     for (size_t i = 0; i < MAX_NAME_LEN; i++)
     {
         char current_char = fmt[extractor->current_byte + i];
+        if (current_char == '\0') return -1;
+
         if (current_char == ']') {
             key[i] = '\0';
             extractor->current_byte += (i + 1);
@@ -96,7 +102,7 @@ void store_list_key(struct fmt_extractor_t* extractor, struct nbt_lookup_t looku
         lookup[extractor->lookup_index].index = 0;
         extractor->lookup_max++;
         extractor->lookup_index++;
-        return;
+        return -1;
     }    
     extractor->current_byte++;
 
@@ -108,6 +114,8 @@ void store_list_key(struct fmt_extractor_t* extractor, struct nbt_lookup_t looku
     for (size_t i = 0; i < 6; i++)
     {
         char current_char = fmt[extractor->current_byte + i];
+        if (current_char == '\0') return -1;
+
         if (!isdigit(current_char)) break;
         count++;
     }
@@ -129,9 +137,11 @@ void store_list_key(struct fmt_extractor_t* extractor, struct nbt_lookup_t looku
 
     extractor->lookup_max++;
     extractor->lookup_index++;
+
+    return 0;
 }
 
-bool check_if_in_list(struct nbt_lookup_t* lookup, int index)
+static bool check_if_in_list(struct nbt_lookup_t* lookup, int index)
 {
     if (index <= 0) return false;
 
@@ -140,7 +150,7 @@ bool check_if_in_list(struct nbt_lookup_t* lookup, int index)
     return true;
 }
 
-void clear_path(struct fmt_extractor_t* extractor, struct nbt_lookup_t* lookup)
+static void clear_path(struct fmt_extractor_t* extractor, struct nbt_lookup_t* lookup)
 {
     for (size_t i = 0; i < extractor->lookup_index; i++)
     {
@@ -150,11 +160,13 @@ void clear_path(struct fmt_extractor_t* extractor, struct nbt_lookup_t* lookup)
     extractor->lookup_max = 0;
 }
 
-void return_pr_key(struct fmt_extractor_t *extractor, char* fmt, char* key)
+static int return_pr_key(struct fmt_extractor_t *extractor, char* fmt, char* key)
 {
     for (size_t i = 0; i < MAX_NAME_LEN; i++)
     {
         char current_char = fmt[extractor->current_byte + i];
+        if (current_char == '\0') return -1;
+
         if (current_char == '\'') {
             key[i] = '\0';
             extractor->current_byte += (i + 1);
@@ -162,10 +174,12 @@ void return_pr_key(struct fmt_extractor_t *extractor, char* fmt, char* key)
         }    
         key[i] = current_char;
     }
-    key[MAX_NAME_LEN] = '\0';  
+    key[MAX_NAME_LEN] = '\0';
+
+    return 0;  
 }
 
-char get_format(struct fmt_extractor_t *extractor, char* fmt)
+static char get_format(struct fmt_extractor_t *extractor, char* fmt)
 {
     while (fmt[extractor->current_byte] != '%')
     {
@@ -182,7 +196,7 @@ char get_format(struct fmt_extractor_t *extractor, char* fmt)
     return format; 
 }
 
-int nbt_get_identifier_index(int current_token, struct nbt_token_t* tok, int max_token)
+static int nbt_get_identifier_index(int current_token, struct nbt_token_t* tok, int max_token)
 {
     for (size_t i = 1; i < 6; i++)
     {
@@ -191,7 +205,7 @@ int nbt_get_identifier_index(int current_token, struct nbt_token_t* tok, int max
     return NBT_WARN;
 }
 
-bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* parser, char* str_2)
+static bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* parser, char* str_2)
 {
     if (nbt_tok_return_type(tok, token_id, parser->max_token) != nbt_identifier) return false;
 
@@ -223,7 +237,7 @@ bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* 
     return result;  
 }
 
-int nbt_get_pr_index(int current_token, struct nbt_token_t* tok, int max_token)
+static int nbt_get_pr_index(int current_token, struct nbt_token_t* tok, int max_token)
 {
     for (size_t i = 1; i < 6; i++)
     {
@@ -232,7 +246,7 @@ int nbt_get_pr_index(int current_token, struct nbt_token_t* tok, int max_token)
     return NBT_WARN;
 }
 
-int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current_index, struct nbt_token_t* tok, struct nbt_parser_t* parser)
+static int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current_index, struct nbt_parser_t* parser)
 {
     
     switch (mode)
@@ -242,7 +256,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
 
             char output;
 
-            output = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token)];
+            output = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token)];
             
             if (out) *(char*)out = output;
             break;
@@ -253,7 +267,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[2];
             for (size_t i = 0; i < sizeof(short); i++)
             {
-                output[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i];
+                output[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i];
             }
             
             if (out) *(short*)out = bswap_16(char_to_short(output));
@@ -265,7 +279,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[4];
             for (size_t i = 0; i < sizeof(int); i++)
             {
-                output[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i];
+                output[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i];
             }
             
             if (out) *(int*)out = char_to_int(output);
@@ -277,7 +291,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[8];
             for (size_t i = 0; i < sizeof(long); i++)
             {
-                output[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i];
+                output[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i];
             }
             
             if (out) *(long*)out = char_to_long(output);
@@ -289,7 +303,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[4];
             for (size_t i = 0; i < sizeof(float); i++)
             {
-                output[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i];
+                output[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i];
             }
             float result = char_to_float(output);
             if (out) *(float*)out = result;
@@ -301,7 +315,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char output[8];
             for (size_t i = 0; i < sizeof(double); i++)
             {
-                output[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i];
+                output[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i];
             }
             double result = char_to_double(output);
             if (out) *(double*)out = result;
@@ -313,7 +327,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             char _len[2];
             for (size_t i = 0; i < 2; i++)
             {
-                _len[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i];
+                _len[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i];
             }
             
             unsigned short len = char_to_ushort(_len);
@@ -321,7 +335,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
             if (out) {
                 for (size_t i = 0; i < len; i++)
                 {
-                    ((char*)out)[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i + 2];
+                    ((char*)out)[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i + 2];
                 }
                 ((char*)out)[len] = '\0';
             }
@@ -334,7 +348,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
                 char output[2];
                 for (size_t i = 0; i < sizeof(short); i++)
                 {
-                    output[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i];
+                    output[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i];
                 }
 
                 if (out) *(unsigned short*)out = char_to_ushort(output) + 1;
@@ -346,7 +360,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
                 char output[4];
                 for (size_t i = 0; i < sizeof(int); i++)
                 {
-                    output[i] = parser->nbt_data->content[nbt_tok_return_start(tok, current_index, parser->max_token) + i];
+                    output[i] = parser->nbt_data->content[nbt_tok_return_start(parser->tok, current_index, parser->max_token) + i];
                 }
                 
                 if (out) *(int*)out = char_to_int(output);
@@ -359,10 +373,10 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
                 int init_index = 0;
 
                 if (type == nbt_identifier) {
-                    init_index = nbt_tok_return_end(tok, current_index, parser->max_token) + 2;
+                    init_index = nbt_tok_return_end(parser->tok, current_index, parser->max_token) + 2;
                 }
                 else {
-                    init_index = nbt_tok_return_start(tok, current_index, parser->max_token) + 1;
+                    init_index = nbt_tok_return_start(parser->tok, current_index, parser->max_token) + 1;
                 }
 
                 for (size_t i = 0; i < sizeof(int); i++)
@@ -380,7 +394,7 @@ int nbt_store_pr(void* out, char mode, char mode_2, nbt_type_t type, int current
     return 0;
 }
 
-void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extractor, struct nbt_lookup_t* path, struct nbt_token_t* tok, struct nbt_match_t* match)
+static void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extractor, struct nbt_lookup_t* path, struct nbt_match_t* match)
 {
     int parent_index = NBT_NOT_AVAIL;
     int current_path = 0;
@@ -400,16 +414,16 @@ void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extracto
             break;
         }
 
-        if (nbt_tok_return_parent(tok, i, parser->max_token) != parent_index) continue;
-        if (nbt_tok_return_type(tok, i, parser->max_token) != path[current_path].type) continue;
+        if (nbt_tok_return_parent(parser->tok, i, parser->max_token) != parent_index) continue;
+        if (nbt_tok_return_type(parser->tok, i, parser->max_token) != path[current_path].type) continue;
         
         if (check_if_in_list(path, current_path) == false) { // Current token is not in a list
 
             /* Check the name of the token */
-            int id = nbt_get_identifier_index(i, tok, parser->max_token);
+            int id = nbt_get_identifier_index(i, parser->tok, parser->max_token);
             if (id == NBT_WARN) continue;
 
-            if (!nbt_cmp_tok_id(id, tok, parser, path[current_path].name)) continue;
+            if (!nbt_cmp_tok_id(id, parser->tok, parser, path[current_path].name)) continue;
 
             current_path++;
             parent_index = i;
@@ -432,28 +446,28 @@ void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extracto
     /* Get the primitive token and store data */
     for (; i < parser->max_token; i++)
     {
-        if (nbt_tok_return_parent(tok, i, parser->max_token) != parent_index) continue;
+        if (nbt_tok_return_parent(parser->tok, i, parser->max_token) != parent_index) continue;
 
         if (check_if_in_list(path, current_path) ==  false) { /* not in list */
 
-            int id = nbt_get_identifier_index(i, tok, parser->max_token);
+            int id = nbt_get_identifier_index(i, parser->tok, parser->max_token);
             if (id == NBT_WARN) continue;
 
-            if (!nbt_cmp_tok_id(id, tok, parser, match->pr_name)) continue;
+            if (!nbt_cmp_tok_id(id, parser->tok, parser, match->pr_name)) continue;
 
-            nbt_type_t type = nbt_tok_return_type(tok, i, parser->max_token);
+            nbt_type_t type = nbt_tok_return_type(parser->tok, i, parser->max_token);
 
             if (type == nbt_list) { // For list, the number of indexes is prefixed after the identifier, so we pass in the identifier token
-                if (nbt_store_pr(match->pr, match->mode_1, match->mode_2, nbt_identifier, id, tok, parser) == -1) log_warn("Incompatible list query");
+                if (nbt_store_pr(match->pr, match->mode_1, match->mode_2, nbt_identifier, id, parser) == -1) log_warn("Incompatible list query");
             }
             else {
-                i = nbt_get_pr_index(i, tok, parser->max_token);
-                if (nbt_store_pr(match->pr, match->mode_1, match->mode_2, type, i, tok, parser) == -1) log_warn("primitive not supported. Mode set %c, but type is %d", match->mode_1, type);
+                i = nbt_get_pr_index(i, parser->tok, parser->max_token);
+                if (nbt_store_pr(match->pr, match->mode_1, match->mode_2, type, i, parser) == -1) log_warn("primitive not supported. Mode set %c, but type is %d", match->mode_1, type);
             }    
             break;
         }    
         else { /* in list */
-            nbt_type_t type = nbt_tok_return_type(tok, i, parser->max_token);
+            nbt_type_t type = nbt_tok_return_type(parser->tok, i, parser->max_token);
             if (type < 0) continue;
             /* Check the number of tokens to skip */
             if (path[current_path - 1].index > 0) {
@@ -463,27 +477,81 @@ void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* extracto
 
             /* account for list in list */
             if (type != nbt_list) {
-                i = nbt_get_pr_index(i, tok, parser->max_token);
+                i = nbt_get_pr_index(i, parser->tok, parser->max_token);
             }
 
-            if (nbt_store_pr(match->pr, match->mode_1, match->mode_2, type, i, tok, parser) == -1) log_warn("primitive not supported. Mode set %c, but type is %d", match->mode_1, type);
+            if (nbt_store_pr(match->pr, match->mode_1, match->mode_2, type, i, parser) == -1) log_warn("primitive not supported. Mode set %c, but type is %d", match->mode_1, type);
             break;
         }
     }
 }
 
-void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
+static int fmt_parse(struct nbt_lookup_t* path, struct fmt_extractor_t* extractor, struct nbt_match_t* match, char* fmt, char* key)
+{
+    char format = 0, format_2 = 0;
+    while (fmt[extractor->current_byte] != '\0') {
+        char current_char = fmt[extractor->current_byte];
+
+        // debug("current index is %d", extractor.current_byte);
+
+        switch (current_char)
+        {
+        case '{': // nbt_compound
+            extractor->current_byte++;
+            if (0 != store_compound_key(extractor, path, fmt)) return -1;
+
+            break;
+
+        case '[': // nbt_list
+            extractor->current_byte++;
+            if (0 != store_list_key(extractor, path, fmt)) return -1;
+
+            break;
+
+        case '\'': { // identifier of primitive
+            extractor->current_byte++;
+            
+            if (0 != return_pr_key(extractor, fmt, key)) return -1;
+
+            format = get_format(extractor, fmt);
+
+            if (format == 'n') {
+                format_2 = fmt[extractor->current_byte];
+                extractor->current_byte++;
+            }   
+
+            match->mode_1 = format;
+            match->mode_2 = format_2;
+            match->pr_name = key;
+
+            return 0;
+            break;
+        }
+
+        case ' ':
+            extractor->current_byte++;
+            break;
+
+        default:
+            extractor->current_byte++;
+            break;
+
+        }
+ 
+    }
+    return -1;
+}
+
+int nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
 {
     /* Initialise parser */
     struct nbt_parser_t parser;
     struct nbt_parser_setting_t setting = {.tok_init_len = NBT_TOK_DEFAULT_LEN, .tok_expand_len = NBT_TOK_DEFAULT_RESIZE_LEN, .list_meta_init_len = NBT_META_DEFAULT_LEN, .list_meta_expand_len = NBT_META_DEFAULT_RESIZE_LEN};
     nbt_init_parser(&parser, content, &setting);
     
-    /*initialise token */
-    struct nbt_token_t* tok = nbt_init_token(&parser);
 
     /* Fill up the token */
-    tok = nbt_tokenise(&parser, tok);
+    if (0 != nbt_tokenise(&parser)) goto error;
 
     /* Debugging: printing out the token */
     // for (size_t i = 0; i < parser->max_token; i++)
@@ -515,68 +583,32 @@ void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
     /* Parse the format string */
     va_start(ap, fmt);
     while (fmt[extractor.current_byte] != '\0') {
-        char current_char = fmt[extractor.current_byte];
+        struct nbt_match_t match = {0};
 
-        // debug("current index is %d", extractor.current_byte);
+        int res = fmt_parse(path, &extractor, &match, fmt, key);
 
-        switch (current_char)
-        {
-        case '{': // nbt_compound
-            extractor.current_byte++;
-            store_compound_key(&extractor, path, fmt);
+        if (res != 0) goto error;
 
-            break;
+        match.pr = va_arg(ap, void*);
+        nbt_match_tok(&parser, &extractor, path, &match);
 
-        case '[': // nbt_list
-            extractor.current_byte++;
-            store_list_key(&extractor, path, fmt);
-
-            break;
-
-        case '\'':{ // identifier of primitive
-            extractor.current_byte++;
-            
-            return_pr_key(&extractor, fmt, key);
-
-            format = get_format(&extractor, fmt);
-
-            if (format == 'n') {
-                format_2 = fmt[extractor.current_byte];
-                extractor.current_byte++;
-            }   
-
-            void* out = va_arg(ap, void*);
-            
-            struct nbt_match_t match = {.mode_1 = format, .mode_2 = format_2, .pr_name = key, .pr = out};
-            nbt_match_tok(&parser, &extractor, path, tok, &match);
-
-            clear_path(&extractor, path); // destroy all the elements stored in the path
-
-            break;
-        }    
-
-        case ' ':
-            extractor.current_byte++;
-            break;
-
-        default:
-            extractor.current_byte++;
-            break;
-        }
- 
+        clear_path(&extractor, path);
     }
 
     /* Cleans up */
     nbt_destroy_parser(&parser);
-    tok = nbt_destroy_token(tok, &parser);
-    parser.list_meta = nbt_destroy_meta(parser.list_meta, &parser);
     va_end(ap);
+
+    return 0;
+
+error:
+    nbt_destroy_parser(&parser);
+    va_end(ap);
+    return -1;
 }
 
-void nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* token, char* fmt, ...)
+int nbt_extract(struct nbt_parser_t* parser, char* fmt, ...)
 {
-    struct nbt_token_t* tok = token;
-
     /* Debugging: printing out the token */
     // for (size_t i = 0; i < parser->max_token; i++)
     // {
@@ -606,62 +638,27 @@ void nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* token, char* f
     }
     // debug("num is %d", num);
 
-
+    if (num == 0) return 0;
 
     /* Parse the format string */
     va_start(ap, fmt);
     while (fmt[extractor.current_byte] != '\0') {
-        char current_char = fmt[extractor.current_byte];
+        struct nbt_match_t match = {0};
 
-        // debug("current index is %d", extractor.current_byte);
+        int res = fmt_parse(path, &extractor, &match, fmt, key);
 
-        switch (current_char)
-        {
-        case '{': // nbt_compound
-            extractor.current_byte++;
-            store_compound_key(&extractor, path, fmt);
+        if (res != 0) goto error;
 
-            break;
+        match.pr = va_arg(ap, void*);
+        nbt_match_tok(parser, &extractor, path, &match);
 
-        case '[': // nbt_list
-            extractor.current_byte++;
-            store_list_key(&extractor, path, fmt);
-
-            break;
-
-        case '\'': { // identifier of primitive
-            extractor.current_byte++;
-            
-            return_pr_key(&extractor, fmt, key);
-
-            format = get_format(&extractor, fmt);
-
-            if (format == 'n') {
-                format_2 = fmt[extractor.current_byte];
-                extractor.current_byte++;
-            }   
-
-            void* out = va_arg(ap, void*);
-
-            struct nbt_match_t match = {.mode_1 = format, .mode_2 = format_2, .pr_name = key, .pr = out};
-            nbt_match_tok(parser, &extractor, path, tok, &match);
-
-            clear_path(&extractor, path); // destroy all the elements stored in the path
-
-            break;
-        }
-
-        case ' ':
-            extractor.current_byte++;
-            break;
-
-        default:
-            extractor.current_byte++;
-            break;
-
-        }
- 
+        clear_path(&extractor, path);
     }
     va_end(ap);
 
+    return 0;
+
+error:
+    va_end(ap);
+    return -1;
 }

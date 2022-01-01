@@ -41,14 +41,17 @@ and `&result` must be passed to the function via variadic arguments.
 ## The simple interface
 
 ```
-void nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
+int nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
 ```
 
 This function parses the NBT data inside `content` and stores it inside the pointers in the variadic arguments.
 
+Outputs:
+- Whether this operation succeeded. 0 if function exited successfully, -1 if function failed.
+
 ## The normal interface
 
-## `nbt_init_parser`:
+### `nbt_init_parser`:
 ```
 void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting)
 ```
@@ -65,7 +68,7 @@ Params:
 
 `struct nbt_setting_t setting` is defined as:
 ```
-struct nbt_setting_t{
+struct nbt_parser_setting_t{
     const int list_meta_init_len;
     const int list_meta_expand_len;
 
@@ -82,7 +85,7 @@ struct nbt_setting_t{
 
 `tok_expand_len`: The additional space allocated to token when there is not enough space.
 
-## `nbt_clear_parser`:
+### `nbt_clear_parser`:
 ```
 void nbt_clear_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content)
 ```
@@ -94,7 +97,7 @@ Params:
 - `content`: The nbt data to be parsed.
 
 
-## `nbt_destroy_parser`:
+### `nbt_destroy_parser`:
 ```
 void nbt_destroy_parser(struct nbt_parser_t* parser)
 ```
@@ -105,47 +108,9 @@ It will only free the list metadata that is allocated on the heap in this struct
 
 This function needs to be called once, when parsing operation ends.
 
-## `nbt_init_token`:
+### `nbt_tokenise`:
 ```
-struct nbt_token_t* nbt_init_token(struct nbt_parser_t* parser)
-```
-This function initialises and allocates the token on the heap.
-
-This function should be called only once, at the start of parsing operation.
-
-Params:
-- `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`.
-
-Outputs:
-- The address of the `struct nbt_token_t` needed for later operations.
-
-## `nbt_clear_token`:
-```
-void nbt_clear_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
-```
-This function clears a filled up struct `nbt_token_t`, so that `struct nbt_token_t* nbt_tokenise` may be reused.
-
-This function does not free anything, so it does not suffer from the overhead of having too many mallocs.
-
-Params:
-- `tok`: the `nbt_token_t` that is being cleared.
-- `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`.
-
-## `nbt_destroy_token`:
-```
-struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser_t* parser);
-```
-This function destroys the `nbt_token_t` allocated by `nbt_init_token`.
-
-This function should be called only once, at the end of nbt parsing operations.
-
-Params:
-- `tok`: The `struct nbt_token_t` that is being destroyed.
-- `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`.
-
-## `nbt_tokenise`:
-```
-struct nbt_token_t* nbt_tokenise(struct nbt_parser_t *parser, struct nbt_token_t* nbt_tok)
+int nbt_tokenise(struct nbt_parser_t *parser);
 ```
 This function converts NBT data into an array of NBT tokens, essentially "parsing" NBT.
 
@@ -153,22 +118,23 @@ This function needs to be called once per NBT text.
 
 Params:
 - `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`. This must not be filled up already by another `struct nbt_token_t* nbt_tokenise`.
-- `nbt_tok`: The token allocated with `struct nbt_token_t* nbt_init_token`. This must not be filled up already by another `struct nbt_token_t* nbt_tokenise`.
 
 Outputs:
-- The updated address of the `struct nbt_token_t` that is passed in to the function. This is because realloc may be called in the function on `nbt_tok`.
+- Whether this operation succeeded. 0 if function exited successfully, -1 if function failed.
 
-## `nbt_extract`:
+### `nbt_extract`:
 ```
-void nbt_extract(struct nbt_parser_t* parser, struct nbt_token_t* tok, char* fmt, ...)
+int nbt_extract(struct nbt_parser_t* parser, char* fmt, ...)
 ```
-This function stores the NBT data parsed with `struct nbt_token_t* nbt_tokenise` into user passed in pointers.
+This function stores the NBT data parsed with `int nbt_tokenise` into user passed in pointers with variadic arguments.
 
 This function could be called several times, for example to get the length of the string the first time, and then get the actual string the second time.
 
 Params:
-- `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`.
-- `tok`: The token filled up by `struct nbt_token_t* nbt_tokenise`.
+- `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`. This must also be passed into `int nbt_tokenise`.
 - `fmt`: The format string. For more infomation look [here](#Format-strings) and [here](#Path-to-data).
 - Variadic arguments: The address of the variables to be filled up.
+
+Outputs:
+- Whether this operation succeeded. 0 if function exited successfully, -1 if function failed.
 

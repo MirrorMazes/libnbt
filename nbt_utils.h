@@ -23,6 +23,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define NBT_NOT_AVAIL -3
+#define NBT_UNCHANGED -4
+#define NBT_WARN -5
+
 #define NBT_TOK_DEFAULT_LEN 50
 #define NBT_TOK_DEFAULT_RESIZE_LEN 25
 #define NBT_META_DEFAULT_LEN 1
@@ -69,6 +73,42 @@
 #define log_info(args, ...)
 #endif
 
+struct nbt_token_t {
+    nbt_type_t type;
+    int start;
+    int end;
+    int len;
+    int parent;
+};
+
+struct nbt_metadata {
+    nbt_type_t type;
+    int32_t num_of_entries;
+};
+
+struct nbt_parser_t {
+    struct nbt_sized_buffer *nbt_data;
+    int current_byte;
+
+    struct nbt_token_t* tok;
+    int current_token;
+    int parent_token;
+    int max_token;
+
+    struct nbt_metadata* list_meta;
+    int cur_index;
+    int max_list;
+
+    const struct nbt_parser_setting_t* setting;
+};
+
+struct nbt_injector_t {
+    struct nbt_sized_buffer nbt_data;
+    int nbt_size;
+
+    struct nbt_injector_setting_t* setting;
+};
+
 void* nbt_realloc(void* ptr, size_t new_len, size_t original_len);
 
 void swap_char_4(char* input, char* output);
@@ -91,9 +131,7 @@ int nbt_tok_return_end(struct nbt_token_t* token, int index, int max);
 int nbt_tok_return_len(struct nbt_token_t* token, int index, int max);
 int nbt_tok_return_parent(struct nbt_token_t* token, int index, int max);
 
-struct nbt_metadata* nbt_init_meta(int init_len, struct nbt_parser_t* parser);
 struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct nbt_parser_t* parser, struct nbt_metadata* payload, const int meta_resize_len);
-struct nbt_metadata* nbt_destroy_meta(struct nbt_metadata* meta, struct nbt_parser_t* parser);
 
 int nbt_meta_return_entries(struct nbt_parser_t* parser, int index);
 
