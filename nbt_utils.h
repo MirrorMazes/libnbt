@@ -73,6 +73,12 @@
 #define log_info(args, ...)
 #endif
 
+/* nbt_extract.c */
+#define MAX_LOOKUP 20
+#define MAX_NAME_LEN 150
+#define MAX_OFFSET_TABLE 20
+#define MAX_DEPTH 30
+
 struct nbt_token_t {
     nbt_type_t type;
     int start;
@@ -87,7 +93,7 @@ struct nbt_metadata {
 };
 
 struct nbt_parser_t {
-    struct nbt_sized_buffer *nbt_data;
+    struct nbt_sized_buffer* nbt_data;
     int current_byte;
 
     struct nbt_token_t* tok;
@@ -109,8 +115,30 @@ struct nbt_injector_t {
     struct nbt_injector_setting_t* setting;
 };
 
+struct nbtb_state {
+    enum nbtb_state_type state;
+
+    /* Stores the address of the ID byte */
+    /* Only used for lists */
+    int payload;
+    
+};
+
+typedef struct nbt_build {
+    struct nbtb_state stack[MAX_DEPTH + 1];
+
+    struct nbtb_state* top;
+
+    int current_depth;
+
+    size_t offset;
+
+} nbt_build;
+
+/* nbt_utils.c */
 void* nbt_realloc(void* ptr, size_t new_len, size_t original_len);
 
+void swap_char_2(char* input, char* output);
 void swap_char_4(char* input, char* output);
 void swap_char_8(char* input, char* output);
 

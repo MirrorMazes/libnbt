@@ -44,6 +44,12 @@ void* nbt_realloc(void* ptr, size_t new_len, size_t original_len)
     return result;
 }
 
+void swap_char_2(char* input, char* output)
+{
+    output[0] = input[1];
+    output[1] = input[0];
+}
+
 void swap_char_4(char* input, char* output)
 {
     output[0] = input[3];

@@ -40,6 +40,14 @@ typedef enum {
     nbt_primitive = -2
 } nbt_type_t;
 
+enum nbtb_state_type{
+    S_INIT = 0,
+    S_CMP = S_INIT,
+    S_OBJ_OR_CLOSE, /* Object refer to all types */
+    S_LST_VAL_OR_CLOSE,
+    S_DONE
+};
+
 struct nbt_sized_buffer {
     char* content;
     int len;
@@ -53,13 +61,12 @@ struct nbt_parser_setting_t {
     const int tok_expand_len;
 };
 
-struct nbt_injector_setting_t {
-    const int nbt_data_init_len;
-};
 
 struct nbt_metadata;
 
 struct nbt_parser_t;
+
+typedef struct nbt_build nbt_build;
 
 /* Normal interface */
 
@@ -73,6 +80,16 @@ int nbt_tokenise(struct nbt_parser_t *parser);
 
 // Extract NBT: in nbt_extract.c
 int nbt_extract(struct nbt_parser_t* parser, char* fmt, ...);
+
+// In nbt_build.c
+int nbt_init_build(nbt_build* b);
+int nbt_start_compound(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len);
+int nbt_end_compound(nbt_build* b, char* buf, const int buf_len);
+int nbt_add_char(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len, char payload);
+int nbt_add_short(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len, short payload);
+int nbt_add_integer(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len, int payload);
+int nbt_add_long(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len, long payload);
+
 
 /* Easy interface */
 int nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...);

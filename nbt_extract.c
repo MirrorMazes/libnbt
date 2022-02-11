@@ -27,9 +27,6 @@
 #include <ctype.h>
 #include <byteswap.h>
 
-#define MAX_LOOKUP 20
-#define MAX_NAME_LEN 150
-
 struct nbt_lookup_t{
     nbt_type_t type;
     char name[MAX_NAME_LEN + 1];
@@ -141,7 +138,7 @@ static int store_list_key(struct fmt_extractor_t* extractor, struct nbt_lookup_t
     return 0;
 }
 
-static bool check_if_in_list(struct nbt_lookup_t* lookup, int index)
+bool check_if_in_list(struct nbt_lookup_t* lookup, int index)
 {
     if (index <= 0) return false;
 
@@ -150,7 +147,7 @@ static bool check_if_in_list(struct nbt_lookup_t* lookup, int index)
     return true;
 }
 
-static void clear_path(struct fmt_extractor_t* extractor, struct nbt_lookup_t* lookup)
+void clear_path(struct fmt_extractor_t* extractor, struct nbt_lookup_t* lookup)
 {
     for (size_t i = 0; i < extractor->lookup_index; i++)
     {
@@ -196,7 +193,7 @@ static char get_format(struct fmt_extractor_t *extractor, char* fmt)
     return format; 
 }
 
-static int nbt_get_identifier_index(int current_token, struct nbt_token_t* tok, int max_token)
+int nbt_get_identifier_index(int current_token, struct nbt_token_t* tok, int max_token)
 {
     for (size_t i = 1; i < 6; i++)
     {
@@ -205,7 +202,7 @@ static int nbt_get_identifier_index(int current_token, struct nbt_token_t* tok, 
     return NBT_WARN;
 }
 
-static bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* parser, char* str_2)
+bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* parser, char* str_2)
 {
     if (nbt_tok_return_type(tok, token_id, parser->max_token) != nbt_identifier) return false;
 
@@ -237,7 +234,7 @@ static bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_par
     return result;  
 }
 
-static int nbt_get_pr_index(int current_token, struct nbt_token_t* tok, int max_token)
+int nbt_get_pr_index(int current_token, struct nbt_token_t* tok, int max_token)
 {
     for (size_t i = 1; i < 6; i++)
     {
@@ -444,9 +441,10 @@ static void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* e
     if (!store_data) return;
     
     /* Get the primitive token and store data */
-    for (; i < parser->max_token; i++)
+    for (; i <= parser->max_token; i++)
     {
         if (nbt_tok_return_parent(parser->tok, i, parser->max_token) != parent_index) continue;
+        if (nbt_tok_return_type(parser->tok, i, parser->max_token) < 0) continue;
 
         if (check_if_in_list(path, current_path) ==  false) { /* not in list */
 
@@ -486,7 +484,7 @@ static void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* e
     }
 }
 
-static int fmt_parse(struct nbt_lookup_t* path, struct fmt_extractor_t* extractor, struct nbt_match_t* match, char* fmt, char* key)
+int fmt_parse(struct nbt_lookup_t* path, struct fmt_extractor_t* extractor, struct nbt_match_t* match, char* fmt, char* key)
 {
     char format = 0, format_2 = 0;
     while (fmt[extractor->current_byte] != '\0') {
@@ -642,7 +640,7 @@ int nbt_extract(struct nbt_parser_t* parser, char* fmt, ...)
 
     /* Parse the format string */
     va_start(ap, fmt);
-    while (fmt[extractor.current_byte] != '\0') {
+    while (fmt[extractor.current_byte] != '\0') { // @TODO better solution for end of fmt
         struct nbt_match_t match = {0};
 
         int res = fmt_parse(path, &extractor, &match, fmt, key);
