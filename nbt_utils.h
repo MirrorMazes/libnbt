@@ -142,6 +142,9 @@ void swap_char_2(char* input, char* output);
 void swap_char_4(char* input, char* output);
 void swap_char_8(char* input, char* output);
 
+void safe_swap_4(char* input, char* output);
+void safe_swap_8(char* input, char* output);
+
 uint16_t char_to_ushort(char* input);
 int16_t char_to_short(char* input);
 int32_t char_to_int(char* input);

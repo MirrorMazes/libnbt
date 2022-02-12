@@ -70,6 +70,20 @@ void swap_char_8(char* input, char* output)
     output[7] = input[0];
 }
 
+void safe_swap_4(char* input, char* output)
+{
+    char buf[4];
+    swap_char_4(input, buf);
+    memcpy(output, buf, 4);
+}
+
+void safe_swap_8(char* input, char* output)
+{
+    char buf[8];
+    swap_char_8(input, buf);
+    memcpy(output, buf, 8);
+}
+
 uint16_t char_to_ushort(char* input)
 {
     int16_t result;
