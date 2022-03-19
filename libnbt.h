@@ -21,6 +21,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define MAX_NAME_LEN 150
+
 typedef enum {
     nbt_end = 0,
     nbt_byte = 1,
@@ -54,6 +56,19 @@ struct nbt_sized_buffer {
     int len;
 };
 
+struct nbt_lookup_t{
+    nbt_type_t type;
+    char name[MAX_NAME_LEN + 1];
+
+    long index;
+};
+
+struct nbt_index_t {
+    int start;
+    int end;
+    int len;
+};
+
 struct nbt_parser_setting_t {
     const int list_meta_init_len;
     const int list_meta_expand_len;
@@ -81,6 +96,7 @@ int nbt_tokenise(struct nbt_parser_t *parser);
 
 // Extract NBT: in nbt_extract.c
 int nbt_extract(struct nbt_parser_t* parser, char* fmt, ...);
+int nbt_find(struct nbt_parser_t* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res);
 
 // In nbt_build.c
 int nbt_init_build(nbt_build* b);

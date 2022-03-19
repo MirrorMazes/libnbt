@@ -75,7 +75,7 @@
 
 /* nbt_extract.c */
 #define MAX_LOOKUP 20
-#define MAX_NAME_LEN 150
+
 #define MAX_OFFSET_TABLE 20
 #define MAX_DEPTH 30
 

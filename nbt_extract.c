@@ -27,12 +27,6 @@
 #include <ctype.h>
 #include <byteswap.h>
 
-struct nbt_lookup_t{
-    nbt_type_t type;
-    char name[MAX_NAME_LEN + 1];
-
-    long index;
-};
 
 struct fmt_extractor_t{
     int current_byte;
@@ -236,7 +230,7 @@ bool nbt_cmp_tok_id(int token_id, struct nbt_token_t* tok, struct nbt_parser_t* 
 
 int nbt_get_pr_index(int current_token, struct nbt_token_t* tok, int max_token)
 {
-    for (size_t i = 1; i < 6; i++)
+    for (size_t i = 0; i < 3; i++)
     {
         if (nbt_tok_return_type(tok, current_token + i, max_token) == nbt_primitive) return current_token + i;
     }
@@ -482,6 +476,56 @@ static void nbt_match_tok(struct nbt_parser_t* parser, struct fmt_extractor_t* e
             break;
         }
     }
+}
+
+int nbt_find(struct nbt_parser_t* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res)
+{   
+    int parent_index = NBT_NOT_AVAIL;
+    int current_path = 0;
+    
+    int i = 0;
+    for (; i < parser->max_token; i++)
+    {
+        if (nbt_tok_return_parent(parser->tok, i, parser->max_token) != parent_index) continue;
+        if (nbt_tok_return_type(parser->tok, i, parser->max_token) != path[current_path].type) continue;
+
+        if (check_if_in_list(path, current_path) == false) { // Current token is not in a list
+
+            /* Check the name of the token */
+            int id = nbt_get_identifier_index(i, parser->tok, parser->max_token);
+            if (id == NBT_WARN) continue;
+
+            if (!nbt_cmp_tok_id(id, parser->tok, parser, path[current_path].name)) continue;
+
+            current_path++;
+            parent_index = i;
+        }
+        else{ // Current token is in a list
+            /* Check the number of tokens to skip */
+
+            // debug("List detected. Current path %d");
+            if (path[current_path - 1].index <= 0) {
+                current_path++;
+                parent_index = i;
+            }
+            else {
+                path[current_path - 1].index--;
+            }    
+        }
+        
+        if (current_path == path_size) {
+            if (path[current_path - 1].type != nbt_compound && path[current_path - 1].type != nbt_list) {
+                i = nbt_get_pr_index(i, parser->tok, parser->max_token);
+            }
+
+            res->start = nbt_tok_return_start(parser->tok, i, parser->max_token);
+            res->end = nbt_tok_return_end(parser->tok, i, parser->max_token);
+            res->len = nbt_tok_return_len(parser->tok, i, parser->max_token);
+
+            return 0;
+        }  
+    }
+    return NBT_WARN;
 }
 
 int fmt_parse(struct nbt_lookup_t* path, struct fmt_extractor_t* extractor, struct nbt_match_t* match, char* fmt, char* key)
