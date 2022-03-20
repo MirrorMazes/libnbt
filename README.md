@@ -1,140 +1,53 @@
 # Libnbt
 A library to work with [NBT](https://wiki.vg/NBT), written in C.
 
-This library is a WIP, and there may be bugs, especially if the operation includes lists.
+This library is a WIP, and there may be bugs.
 
 ## Usage
-There are two interfaces you can use in this library, the simple interface and the normal interface.
-
-The simple interface is designed to be easy to use,
-while the normal interface is designed to be more customisable and memory efficient.
-
-### Format strings
-For functions to extract NBT data, the following format strings are available:
-
-- Byte: `%b`
-- Short: `%h`
-- Integer: `%i`
-- Long: `%l`
-- Float: `%f`
-- Double: `%d`
-- String: `%s`
-- Number of characters in a string: `%ns` (An unsigned short)
-- Number of bytes in a byte array: `%nb` (A signed integer)
-- Number of integers in an integer array: `%ni` (A signed integer)
-- Number of longs in a long array: `%nl` (A signed integer)
-- Number of elements in a list: `%nt` (A signed integer)
-
-### Path to data
-For extracting NBT, there is a simple way to express the path to the data.
-
-1. Name of a compound is enclosed by `{}`
-2. Name of a list is enclosed by `[]:x`, where x is the index of the element to access.
-3. Name of the data to be accessed is enclosed by `''`
-
-For example, to access a short called `shortTest`, which is enclosed by a compound called `Level`, the path would be `[Level]'shortTest'`.
-
-To store `shortTest` in a variable called `result`, the whole format string would be `"[Level]'shortTest':%h"`, 
-and `&result` must be passed to the function via variadic arguments.
+There are two parts to this library. nbt_build and nbt_find.
 
 
-## The simple interface
+## Nbt build
+This part of the library allows you to build NBT data structures.
 
-```
-int nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...)
-```
-
-This function parses the NBT data inside `content` and stores it inside the pointers in the variadic arguments.
-
-Outputs:
-- Whether this operation succeeded. 0 if function exited successfully, -1 if function failed.
-
-## The normal interface
-
-### `nbt_init_parser`:
-```
-void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_setting_t* setting)
-```
-This function initialises `struct nbt_parser_t`, which is needed for operations later on.
-
-This function also allocated the inital space for list metadata.
-
-This function should be called only once, at the start of the program.
+### Initialisation
+The initialisation function `void nbt_init_build(nbt_build* b);` must be called before using any functions in nbt_build.
+Since there is no heap allocation, no destroy or cleanup function needs to be called.
 
 Params:
-- `parser`: This is the `struct nbt_parser_t` that is initialised. This can be allocated on the stack.
-- `content`: The nbt data to be parsed.
-- `setting`: The global setting of the parser.
+- `nbt_build* b`: The address of the nbt_build structure to be initialised.
 
-`struct nbt_setting_t setting` is defined as:
-```
-struct nbt_parser_setting_t{
-    const int list_meta_init_len;
-    const int list_meta_expand_len;
+### Common parameters
+Most functionns in nbt_build start with `nbt_build* b, char* buf, const int buf_len`
 
-    const int tok_init_len;
-    const int tok_expand_len;
-};
-```
+- `nbt_build* b` refers to the nbt_build structure initialised with `nbt_init_build`
+- `char* buf` refers to the buffer to store the NBT data.
+- `const int buf_len` refers to the length of the buffer.
 
-`list_meta_init_len`: The initial length of the list metadata allocated on the heap.
+### Building compounds and lists
+Compounds can be build with `nbt_start_compound` and `nbt_start_list` respectively. 
 
-`list_meta_expand_len`: The additional space allocated to list metadata when there is not enough space.
+The respective end functions, for example `nbt_end_compound` for compounds, must be called to signal the end of the compound or list.
 
-`tok_init_len`: Initial length of the token allocate to the heap.
+Paramaters:
+- `char* name`: The name of the compound or list. Will be ignored if in list.
+- `const short name_len`: Length of the name.
 
-`tok_expand_len`: The additional space allocated to token when there is not enough space.
+Returns:
+- `0` if operation succeeded.
+- `NBT_WARN` if operation failed.
+- `NBT_NOMEM` if there is a lack of memory in `char* buf`.
 
-### `nbt_clear_parser`:
-```
-void nbt_clear_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content)
-```
+### Building simple data structures
+Other data structures can be build with `int nbt_add_##datatype(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len, ##datatype payload);`
+Paramaters:
+- `char* name`: The name of the compound or list. Will be ignored if in list.
+- `const short name_len`: Length of the name.
+- `[datatype] payload`: The payload to be stored in NBT.
+- (array only) `payload_len`: The length of the payload.
 
-This function clears the `struct nbt_parser_t`, so that `struct nbt_token_t* nbt_tokenise` may be reused.
-
-Params:
-- `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`.
-- `content`: The nbt data to be parsed.
-
-
-### `nbt_destroy_parser`:
-```
-void nbt_destroy_parser(struct nbt_parser_t* parser)
-```
-
-This function destroys the `parser` passed to it.
-
-It will only free the list metadata that is allocated on the heap in this structure.
-
-This function needs to be called once, when parsing operation ends.
-
-### `nbt_tokenise`:
-```
-int nbt_tokenise(struct nbt_parser_t *parser);
-```
-This function converts NBT data into an array of NBT tokens, essentially "parsing" NBT.
-
-This function needs to be called once per NBT text.
-
-Params:
-- `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`. This must not be filled up already by another `struct nbt_token_t* nbt_tokenise`.
-
-Outputs:
-- Whether this operation succeeded. 0 if function exited successfully, -1 if function failed.
-
-### `nbt_extract`:
-```
-int nbt_extract(struct nbt_parser_t* parser, char* fmt, ...)
-```
-This function stores the NBT data parsed with `int nbt_tokenise` into user passed in pointers with variadic arguments.
-
-This function could be called several times, for example to get the length of the string the first time, and then get the actual string the second time.
-
-Params:
-- `parser`: The address of struct `nbt_parser_t` initialised with `void nbt_init_parser`. This must also be passed into `int nbt_tokenise`.
-- `fmt`: The format string. For more infomation look [here](#Format-strings) and [here](#Path-to-data).
-- Variadic arguments: The address of the variables to be filled up.
-
-Outputs:
-- Whether this operation succeeded. 0 if function exited successfully, -1 if function failed.
+Returns:
+- `0` if operation succeeded.
+- `NBT_WARN` if operation failed.
+- `NBT_NOMEM` if there is a lack of memory in `char* buf`.
 

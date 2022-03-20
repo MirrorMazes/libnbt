@@ -25,7 +25,6 @@
 
 #define NBT_NOT_AVAIL -3
 #define NBT_UNCHANGED -4
-#define NBT_WARN -5
 
 #define NBT_TOK_DEFAULT_LEN 50
 #define NBT_TOK_DEFAULT_RESIZE_LEN 25

@@ -23,6 +23,9 @@
 
 #define MAX_NAME_LEN 150
 
+#define NBT_WARN -5
+#define NBT_NOMEM -6
+
 typedef enum {
     nbt_end = 0,
     nbt_byte = 1,
@@ -86,7 +89,7 @@ int nbt_tokenise(nbt_parser *parser);
 int nbt_find(nbt_parser* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res);
 
 // nbt_build.c
-int nbt_init_build(nbt_build* b);
+void nbt_init_build(nbt_build* b);
 int nbt_start_compound(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len);
 int nbt_end_compound(nbt_build* b, char* buf, const int buf_len);
 int nbt_start_list(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len);

@@ -94,7 +94,7 @@ static void incre_list_meta(nbt_build* b, char* buf, int buf_len)
     nbt_replace_raw_nbt(b, b->top->payload + 1, new_list_count, 4, buf, buf_len);
 }
 
-int nbt_init_build(nbt_build* b)
+void nbt_init_build(nbt_build* b)
 {
     memset(b->stack, 0, MAX_DEPTH * sizeof(struct nbtb_state));
     b->current_depth = 0;
@@ -110,11 +110,11 @@ int nbt_start_compound(nbt_build* b, char* buf, const int buf_len, char* name, c
     {
     case S_CMP:
     case S_OBJ_OR_CLOSE: {
-        if (nbtb_incre_state(b, S_OBJ_OR_CLOSE)) return -1;
+        if (nbtb_incre_state(b, S_OBJ_OR_CLOSE)) return NBT_WARN;
 
         int total_len = 1 + 2 + name_len;
 
-        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return -1;
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
 
         char id = nbt_compound;
         char len[2];
@@ -131,20 +131,19 @@ int nbt_start_compound(nbt_build* b, char* buf, const int buf_len, char* name, c
         char id = nbt_compound;
         nbt_replace_raw_nbt(b, b->top->payload, &id, 1, buf, buf_len);
 
-        if (nbt_change_state(b, S_NXT_LST_VAL_OR_CLOSE)) return -1;
+        if (nbt_change_state(b, S_NXT_LST_VAL_OR_CLOSE)) return NBT_WARN;
     } /* Fall through */
     case S_NXT_LST_VAL_OR_CLOSE: {
-    if (buf[b->top->payload] != (char)nbt_compound) return -1;
+        if (buf[b->top->payload] != (char)nbt_compound) return NBT_WARN;
 
         incre_list_meta(b, buf, buf_len);
 
-        if (nbtb_incre_state(b, S_OBJ_OR_CLOSE)) return -1;        
+        if (nbtb_incre_state(b, S_OBJ_OR_CLOSE)) return NBT_WARN;        
         break;
     }
 
-
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
 
@@ -160,16 +159,16 @@ int nbt_end_compound(nbt_build* b, char* buf, const int buf_len)
         return 0;
         break;
     case S_OBJ_OR_CLOSE:
-        if (nbt_decre_state(b)) return -1;
+        if (nbt_decre_state(b)) return NBT_WARN;
         break;
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
 
     char payload = nbt_end;
 
-    nbt_add_raw_nbt(b, b->offset, &payload, 1, buf, buf_len);
+    if (nbt_add_raw_nbt(b, b->offset, &payload, 1, buf, buf_len)) return NBT_NOMEM;
 
     return 0;
 }
@@ -187,7 +186,7 @@ int nbt_start_list(nbt_build* b, char* buf, const int buf_len, char* name, const
         char len[2];
         swap_char_2((char*)&name_len, len);
 
-        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return -1;
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
         nbt_replace_raw_nbt(b, b->offset, &id, 1, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, len, 2, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, name, name_len, buf, buf_len);
@@ -201,19 +200,19 @@ int nbt_start_list(nbt_build* b, char* buf, const int buf_len, char* name, const
         nbt_change_state(b, S_NXT_LST_VAL_OR_CLOSE);
     } /* Fall through */
     case S_NXT_LST_VAL_OR_CLOSE: {
-        if (buf[b->top->payload] != (char)nbt_list) return -1;
+        if (buf[b->top->payload] != (char)nbt_list) return NBT_WARN;
 
         incre_list_meta(b, buf, buf_len);
-        if (nbt_allocate_raw_nbt(b, b->offset, 5, buf, buf_len)) return -1;
+        if (nbt_allocate_raw_nbt(b, b->offset, 5, buf, buf_len)) return NBT_NOMEM;
         break;
     }
 
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
 
-    if (nbtb_incre_state(b, S_LST_VAL_OR_CLOSE)) return -1;
+    if (nbtb_incre_state(b, S_LST_VAL_OR_CLOSE)) return NBT_WARN;
     b->top->payload = b->offset;
 
     char prefix[5] = {0};
@@ -229,10 +228,10 @@ int nbt_end_list(nbt_build* b, char* buf, const int buf_len)
     {
     case S_NXT_LST_VAL_OR_CLOSE:    
     case S_LST_VAL_OR_CLOSE:
-        if (nbt_decre_state(b)) return -1;
+        if (nbt_decre_state(b)) return NBT_WARN;
         break;
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
     return 0;
@@ -249,7 +248,7 @@ int nbt_add_single(nbt_build* b, char* buf, const int buf_len, nbt_type_t type, 
         char _name_len[2];
         swap_char_2((char*)&name_len, _name_len);
 
-        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return -1;
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
         nbt_replace_raw_nbt(b, b->offset, (const char*)&type, 1, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, _name_len, 2, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, name, name_len, buf, buf_len);
@@ -263,16 +262,16 @@ int nbt_add_single(nbt_build* b, char* buf, const int buf_len, nbt_type_t type, 
         nbt_change_state(b, S_NXT_LST_VAL_OR_CLOSE);
     } /* Fall through */
     case S_NXT_LST_VAL_OR_CLOSE: {
-        if (buf[b->top->payload] != (char)type) return -1;
+        if (buf[b->top->payload] != (char)type) return NBT_WARN;
 
-        nbt_allocate_raw_nbt(b, b->offset, payload_len, buf, buf_len);
+        if (nbt_allocate_raw_nbt(b, b->offset, payload_len, buf, buf_len)) return NBT_NOMEM;
 
         incre_list_meta(b, buf, buf_len);
         break;
     }
 
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
 
@@ -343,7 +342,7 @@ int nbt_add_byte_array(nbt_build* b, char* buf, const int buf_len, char* name, c
         char _name_len[2];
         swap_char_2((char*)&name_len, _name_len);
 
-        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return -1;
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
         nbt_replace_raw_nbt(b, b->offset, &id, 1, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, _name_len, 2, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, name, name_len, buf, buf_len);
@@ -358,7 +357,7 @@ int nbt_add_byte_array(nbt_build* b, char* buf, const int buf_len, char* name, c
         nbt_change_state(b, S_NXT_LST_VAL_OR_CLOSE);
     } /* Fall through */
     case S_NXT_LST_VAL_OR_CLOSE: {
-        if (buf[b->top->payload] != (char)nbt_byte_array) return -1;
+        if (buf[b->top->payload] != (char)nbt_byte_array) return NBT_WARN;
 
         total_len = 4 + payload_len;
         nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len);
@@ -368,7 +367,7 @@ int nbt_add_byte_array(nbt_build* b, char* buf, const int buf_len, char* name, c
     }
 
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
 
@@ -396,7 +395,7 @@ int nbt_add_string(nbt_build* b, char* buf, const int buf_len, char* name, const
         char _name_len[2];
         swap_char_2((char*)&name_len, _name_len);
 
-        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return -1;
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
         nbt_replace_raw_nbt(b, b->offset, &id, 1, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, _name_len, 2, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, name, name_len, buf, buf_len);
@@ -411,17 +410,17 @@ int nbt_add_string(nbt_build* b, char* buf, const int buf_len, char* name, const
         nbt_change_state(b, S_NXT_LST_VAL_OR_CLOSE);
     } /* Fall through */
     case S_NXT_LST_VAL_OR_CLOSE: {
-        if (buf[b->top->payload] != (char)nbt_string) return -1;
+        if (buf[b->top->payload] != (char)nbt_string) return NBT_WARN;
 
         total_len = 2 + payload_len;
-        nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len);
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
 
         incre_list_meta(b, buf, buf_len);
         break;
     }
 
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
 
@@ -449,7 +448,7 @@ int nbt_add_int_array(nbt_build* b, char* buf, const int buf_len, char* name, co
         char _name_len[2];
         swap_char_2((char*)&name_len, _name_len);
 
-        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return -1;
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
         nbt_replace_raw_nbt(b, b->offset, &id, 1, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, _name_len, 2, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, name, name_len, buf, buf_len);
@@ -464,17 +463,17 @@ int nbt_add_int_array(nbt_build* b, char* buf, const int buf_len, char* name, co
         nbt_change_state(b, S_NXT_LST_VAL_OR_CLOSE);
     } /* Fall through */
     case S_NXT_LST_VAL_OR_CLOSE: {
-        if (buf[b->top->payload] != (char)nbt_int_array) return -1;
+        if (buf[b->top->payload] != (char)nbt_int_array) return NBT_WARN;
 
         total_len = 4 + payload_len * sizeof(int);
-        nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len);
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
 
         incre_list_meta(b, buf, buf_len);
         break;
     }
 
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
 
@@ -507,7 +506,7 @@ int nbt_add_long_array(nbt_build* b, char* buf, const int buf_len, char* name, c
         char _name_len[2];
         swap_char_2((char*)&name_len, _name_len);
 
-        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return -1;
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
         nbt_replace_raw_nbt(b, b->offset, &id, 1, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, _name_len, 2, buf, buf_len);
         nbt_replace_raw_nbt(b, b->offset, name, name_len, buf, buf_len);
@@ -522,17 +521,17 @@ int nbt_add_long_array(nbt_build* b, char* buf, const int buf_len, char* name, c
         nbt_change_state(b, S_NXT_LST_VAL_OR_CLOSE);
     } /* Fall through */
     case S_NXT_LST_VAL_OR_CLOSE: {
-        if (buf[b->top->payload] != (char)nbt_long_array) return -1;
+        if (buf[b->top->payload] != (char)nbt_long_array) return NBT_WARN;
 
         total_len = 4 + payload_len * sizeof(long);
-        nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len);
+        if (nbt_allocate_raw_nbt(b, b->offset, total_len, buf, buf_len)) return NBT_NOMEM;
 
         incre_list_meta(b, buf, buf_len);
         break;
     }
 
     default:
-        return -1;
+        return NBT_WARN;
         break;
     }
 
