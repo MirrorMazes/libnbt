@@ -42,15 +42,6 @@ typedef enum {
     nbt_primitive = -2
 } nbt_type_t;
 
-enum nbtb_state_type {
-    S_INIT = 0,
-    S_CMP = S_INIT,
-    S_OBJ_OR_CLOSE, /* Object refer to all types */
-    S_LST_VAL_OR_CLOSE,
-    S_NXT_LST_VAL_OR_CLOSE,
-    S_DONE
-};
-
 struct nbt_sized_buffer {
     char* content;
     int len;
@@ -77,28 +68,24 @@ struct nbt_parser_setting_t {
     const int tok_expand_len;
 };
 
-
-struct nbt_metadata;
-
-struct nbt_parser_t;
+typedef struct nbt_parser nbt_parser;
 
 typedef struct nbt_build nbt_build;
 
 /* Normal interface */
 
-// Parser util functions: in nbt_utils.c
-void nbt_init_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content, const struct nbt_parser_setting_t* setting);
-void nbt_clear_parser(struct nbt_parser_t* parser, struct nbt_sized_buffer* content);
-void nbt_destroy_parser(struct nbt_parser_t* parser);
+// nbt_utils.c
+void nbt_init_parser(nbt_parser* parser, struct nbt_sized_buffer* content, const struct nbt_parser_setting_t* setting);
+void nbt_clear_parser(nbt_parser* parser, struct nbt_sized_buffer* content);
+void nbt_destroy_parser(nbt_parser* parser);
 
-// Tokenise NBT: in nbt_tok.c
-int nbt_tokenise(struct nbt_parser_t *parser);
+// nbt_tok.c
+int nbt_tokenise(nbt_parser *parser);
 
-// Extract NBT: in nbt_extract.c
-int nbt_extract(struct nbt_parser_t* parser, char* fmt, ...);
-int nbt_find(struct nbt_parser_t* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res);
+// nbt_find.c
+int nbt_find(nbt_parser* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res);
 
-// In nbt_build.c
+// nbt_build.c
 int nbt_init_build(nbt_build* b);
 int nbt_start_compound(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len);
 int nbt_end_compound(nbt_build* b, char* buf, const int buf_len);
@@ -115,6 +102,3 @@ int nbt_add_string(nbt_build* b, char* buf, const int buf_len, char* name, const
 int nbt_add_int_array(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len, int payload[], int payload_len);
 int nbt_add_long_array(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len, long payload[], int payload_len);
 
-
-/* Easy interface */
-int nbt_easy_extract(struct nbt_sized_buffer* content, char* fmt, ...);

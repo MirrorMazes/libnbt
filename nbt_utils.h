@@ -73,11 +73,18 @@
 #define log_info(args, ...)
 #endif
 
-/* nbt_extract.c */
 #define MAX_LOOKUP 20
 
-#define MAX_OFFSET_TABLE 20
 #define MAX_DEPTH 30
+
+enum nbtb_state_type {
+    S_INIT = 0,
+    S_CMP = S_INIT,
+    S_OBJ_OR_CLOSE, /* Object refer to all types */
+    S_LST_VAL_OR_CLOSE,
+    S_NXT_LST_VAL_OR_CLOSE,
+    S_DONE
+};
 
 struct nbt_token_t {
     nbt_type_t type;
@@ -92,7 +99,7 @@ struct nbt_metadata {
     int32_t num_of_entries;
 };
 
-struct nbt_parser_t {
+typedef struct nbt_parser {
     struct nbt_sized_buffer* nbt_data;
     int current_byte;
 
@@ -106,14 +113,7 @@ struct nbt_parser_t {
     int max_list;
 
     const struct nbt_parser_setting_t* setting;
-};
-
-struct nbt_injector_t {
-    struct nbt_sized_buffer nbt_data;
-    int nbt_size;
-
-    struct nbt_injector_setting_t* setting;
-};
+} nbt_parser;
 
 struct nbtb_state {
     enum nbtb_state_type state;
@@ -121,7 +121,6 @@ struct nbtb_state {
     /* Stores the address of the ID byte */
     /* Only used for lists */
     int payload;
-    
 };
 
 typedef struct nbt_build {
@@ -154,7 +153,7 @@ float char_to_float(char* input);
 double char_to_double(char* input);
 
 
-struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt_parser_t* parser, const struct nbt_token_t* payload, const int tok_resize_len);
+struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, nbt_parser* parser, const struct nbt_token_t* payload, const int tok_resize_len);
 
 nbt_type_t nbt_tok_return_type(struct nbt_token_t* token, int index, int max);
 int nbt_tok_return_start(struct nbt_token_t* token, int index, int max);
@@ -162,8 +161,6 @@ int nbt_tok_return_end(struct nbt_token_t* token, int index, int max);
 int nbt_tok_return_len(struct nbt_token_t* token, int index, int max);
 int nbt_tok_return_parent(struct nbt_token_t* token, int index, int max);
 
-struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct nbt_parser_t* parser, struct nbt_metadata* payload, const int meta_resize_len);
+struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, nbt_parser* parser, struct nbt_metadata* payload, const int meta_resize_len);
 
-int nbt_meta_return_entries(struct nbt_parser_t* parser, int index);
-
-
+int nbt_meta_return_entries(nbt_parser* parser, int index);
