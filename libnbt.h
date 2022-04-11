@@ -1,7 +1,7 @@
 /* 
  *  Libnbt: A library to work with NBT data, written in C
  *
- *  Copyright (C) 2021  Azbantium <azbantium@firemail.cc>
+ *  Copyright (C) 2021-2022  Azbantium <azbantium@firemail.cc>
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
