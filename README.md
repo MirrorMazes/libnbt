@@ -6,6 +6,7 @@ This library is a WIP, and there may be bugs.
 ## Usage
 There are two parts to this library. nbt_build and nbt_find.
 
+Only `libnbt.h` need to be included for both parts of the library.
 
 ## Nbt build
 This part of the library allows you to build NBT data structures.
