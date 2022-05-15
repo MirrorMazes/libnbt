@@ -75,6 +75,8 @@ typedef struct nbt_parser nbt_parser;
 
 typedef struct nbt_build nbt_build;
 
+typedef struct nbt_token_t nbt_tok;
+
 /* Normal interface */
 
 // nbt_utils.c
@@ -83,10 +85,10 @@ void nbt_clear_parser(nbt_parser* parser, struct nbt_sized_buffer* content);
 void nbt_destroy_parser(nbt_parser* parser);
 
 // nbt_tok.c
-int nbt_tokenise(nbt_parser *parser);
+int nbt_tokenise(nbt_parser* parser, nbt_tok* tok, const int tok_len);
 
 // nbt_find.c
-int nbt_find(nbt_parser* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res);
+int nbt_find(nbt_tok* tok, const int tok_len, nbt_parser* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res);
 
 // nbt_build.c
 void nbt_init_build(nbt_build* b);

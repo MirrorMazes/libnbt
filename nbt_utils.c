@@ -114,7 +114,7 @@ double char_to_double(char* input)
     return result;
 }
 
-void nbt_fill_token(struct nbt_token_t *token, nbt_type_t type, int start, int end, int len, int parent)
+void nbt_fill_token(nbt_tok *token, nbt_type_t type, int start, int end, int len, int parent)
 {
     if (type != NBT_UNCHANGED) token->type = type;
     if (start != NBT_UNCHANGED) token->start = start;
@@ -130,31 +130,31 @@ void fill_meta(struct nbt_metadata* metadata, nbt_type_t type, int32_t num)
     metadata->type = type;
 }
 
-nbt_type_t nbt_tok_return_type(struct nbt_token_t* token, int index, int max)
+nbt_type_t nbt_tok_return_type(nbt_tok* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].type;
 }
 
-int nbt_tok_return_start(struct nbt_token_t* token, int index, int max)
+int nbt_tok_return_start(nbt_tok* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].start;
 }
 
-int nbt_tok_return_end(struct nbt_token_t* token, int index, int max)
+int nbt_tok_return_end(nbt_tok* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].end;
 }
 
-int nbt_tok_return_len(struct nbt_token_t* token, int index, int max)
+int nbt_tok_return_len(nbt_tok* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].len;
 }
 
-int nbt_tok_return_parent(struct nbt_token_t* token, int index, int max)
+int nbt_tok_return_parent(nbt_tok* token, int index, int max)
 {
     if (index < 0 || index > max || !token) return NBT_WARN;
     return token[index].parent;
@@ -177,29 +177,15 @@ static struct nbt_metadata* nbt_destroy_meta(struct nbt_metadata* meta, struct n
     return NULL;
 }
 
-static struct nbt_token_t* nbt_init_token(const int init_len, struct nbt_parser* parser)
+static nbt_tok* nbt_init_token(const int init_len, struct nbt_parser* parser)
 {
-    struct nbt_token_t* tok = calloc(sizeof(struct nbt_token_t), init_len + 1);
+    nbt_tok* tok = calloc(sizeof(nbt_tok), init_len + 1);
 
     if (tok == NULL) return NULL;
 
-    parser->max_token = init_len;
     return tok;
 }
 
-static void nbt_clear_token(struct nbt_token_t* tok, struct nbt_parser* parser)
-{
-    memset(tok, 0, parser->max_token);
-}
-
-static struct nbt_token_t* nbt_destroy_token(struct nbt_token_t* tok, struct nbt_parser* parser)
-{
-    if (!tok) return tok;
-
-    free(tok);
-    parser->max_token = 0;
-    return NULL;
-}
 
 struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct nbt_parser* parser, struct nbt_metadata* payload, const int meta_resize_len)
 {
@@ -218,19 +204,12 @@ struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct n
     return res_meta;
 }
 
-struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, struct nbt_parser* parser, const struct nbt_token_t* payload, const int tok_resize_len)
+int nbt_add_token(nbt_tok* tok, const int tok_len, int index, const nbt_tok* payload)
 {
-    struct nbt_token_t* res_tok = tok;
-    if (index > parser->max_token) {
-        res_tok = nbt_realloc(res_tok, sizeof(struct nbt_token_t) * (parser->max_token + tok_resize_len + 1), sizeof(struct nbt_token_t) * (parser->max_token + 1));
+    if (index > tok_len) return 1;
 
-        if (res_tok == NULL || (parser->max_token + tok_resize_len) < index) return NULL;
-
-        parser->max_token += tok_resize_len;
-    }
-    nbt_fill_token(&res_tok[index], payload->type, payload->start, payload->end, payload->len, payload->parent);
-
-    return res_tok;
+    nbt_fill_token(&tok[index], payload->type, payload->start, payload->end, payload->len, payload->parent);
+    return 0;
 }
 
 void nbt_init_parser(struct nbt_parser* parser, struct nbt_sized_buffer* content, const struct nbt_parser_setting_t* setting)
@@ -242,7 +221,6 @@ void nbt_init_parser(struct nbt_parser* parser, struct nbt_sized_buffer* content
     parser->current_byte = 0;
     parser->current_token = 0;
     parser->parent_token = NBT_NOT_AVAIL;
-    parser->tok = nbt_init_token(setting->tok_init_len, parser);
     
     parser->cur_index = 0;
     parser->max_list = 0;
@@ -268,15 +246,12 @@ void nbt_clear_parser(struct nbt_parser* parser, struct nbt_sized_buffer* conten
 
     parser->nbt_data = content;
 
-    nbt_clear_token(parser->tok, parser);
 }
 
 void nbt_destroy_parser(struct nbt_parser* parser)
 {
     nbt_destroy_meta(parser->list_meta, parser);
     parser->list_meta = NULL;
-
-    parser->tok = nbt_destroy_token(parser->tok, parser);
 }
 
 int nbt_meta_return_entries(struct nbt_parser* parser, int index)

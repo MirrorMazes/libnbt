@@ -102,10 +102,8 @@ typedef struct nbt_parser {
     struct nbt_sized_buffer* nbt_data;
     int current_byte;
 
-    struct nbt_token_t* tok;
     int current_token;
     int parent_token;
-    int max_token;
 
     struct nbt_metadata* list_meta;
     int cur_index;
@@ -152,13 +150,13 @@ float char_to_float(char* input);
 double char_to_double(char* input);
 
 
-struct nbt_token_t* nbt_add_token(struct nbt_token_t* tok, int index, nbt_parser* parser, const struct nbt_token_t* payload, const int tok_resize_len);
+int nbt_add_token(nbt_tok* tok, const int tok_len, int index, const nbt_tok* payload);
 
-nbt_type_t nbt_tok_return_type(struct nbt_token_t* token, int index, int max);
-int nbt_tok_return_start(struct nbt_token_t* token, int index, int max);
-int nbt_tok_return_end(struct nbt_token_t* token, int index, int max);
-int nbt_tok_return_len(struct nbt_token_t* token, int index, int max);
-int nbt_tok_return_parent(struct nbt_token_t* token, int index, int max);
+nbt_type_t nbt_tok_return_type(nbt_tok* token, int index, int max);
+int nbt_tok_return_start(nbt_tok* token, int index, int max);
+int nbt_tok_return_end(nbt_tok* token, int index, int max);
+int nbt_tok_return_len(nbt_tok* token, int index, int max);
+int nbt_tok_return_parent(nbt_tok* token, int index, int max);
 
 struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, nbt_parser* parser, struct nbt_metadata* payload, const int meta_resize_len);
 
