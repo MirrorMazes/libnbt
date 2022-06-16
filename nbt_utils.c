@@ -18,7 +18,7 @@ void* nbt_realloc(void* ptr, size_t new_len, size_t original_len)
     if (new_len >= original_len) {
         memcpy(result, ptr, original_len);
     }
-    else{
+    else {
         memcpy(result, ptr, new_len);
     }
 
@@ -160,19 +160,34 @@ int nbt_tok_return_parent(nbt_tok* token, int index, int max)
     return token[index].parent;
 }
 
-static struct nbt_metadata* nbt_init_meta(int init_len, struct nbt_parser* parser)
+static struct nbt_metadata* nbt_init_meta(struct nbt_parser* parser)
 {
-    struct nbt_metadata* meta = calloc(sizeof(struct nbt_metadata), init_len + 1);
+    void* (*alloc) (size_t size);
+    if (parser->setting->alloc) {
+        alloc = parser->setting->alloc;
+    }    
+    else {
+        alloc = malloc;
+    }    
 
+    struct nbt_metadata* meta = alloc(sizeof(struct nbt_metadata) * (parser->setting->list_meta_init_len + 1));
     if (!meta) return NULL;
 
-    parser->max_list = init_len;
+    parser->max_list = parser->setting->list_meta_init_len;
     return meta;
 }
 
 static struct nbt_metadata* nbt_destroy_meta(struct nbt_metadata* meta, struct nbt_parser* parser)
 {
-    if (meta) free(meta);
+    void (*free_) (void* mem);
+    if (parser->setting->free) {
+        free_ = parser->setting->free;
+    }
+    else {
+        free_ = free;
+    }
+
+    if (meta) free_(meta);
     parser->max_list = 0;
     return NULL;
 }
@@ -187,21 +202,12 @@ static nbt_tok* nbt_init_token(const int init_len, struct nbt_parser* parser)
 }
 
 
-struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, struct nbt_parser* parser, struct nbt_metadata* payload, const int meta_resize_len)
+int nbt_add_meta(int index, struct nbt_parser* parser, struct nbt_metadata* payload)
 {
-    struct nbt_metadata* res_meta = meta;
+    if (index >= parser->max_list) return NBT_LNOMEM;
+    fill_meta(&parser->list_meta[index], payload->type, payload->num_of_entries);
 
-    if (index >= parser->max_list) {
-        res_meta = nbt_realloc(res_meta, sizeof(struct nbt_metadata) * (parser->max_list + meta_resize_len + 1), sizeof(struct nbt_metadata) * (parser->max_list + 1));
-
-        if (!res_meta) free(meta);
-        if (!res_meta || (parser->max_list + meta_resize_len) < index) return NULL;
-
-        parser->max_list += meta_resize_len;
-    }
-    fill_meta(&res_meta[index], payload->type, payload->num_of_entries);
-
-    return res_meta;
+    return 0;
 }
 
 int nbt_add_token(nbt_tok* tok, const int tok_len, int index, const nbt_tok* payload)
@@ -225,7 +231,7 @@ void nbt_init_parser(struct nbt_parser* parser, struct nbt_sized_buffer* content
     parser->cur_index = 0;
     parser->max_list = 0;
 
-    parser->list_meta = nbt_init_meta(setting->list_meta_init_len, parser);
+    parser->list_meta = nbt_init_meta(parser);
 
     parser->list_meta->num_of_entries = NBT_NOT_AVAIL;
     parser->list_meta->type = 0;

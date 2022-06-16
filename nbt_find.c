@@ -36,7 +36,7 @@ static int nbt_get_pr_index(int current_token, nbt_tok* tok, int max_token)
     return NBT_WARN;
 }
 
-static bool nbt_cmp_tok_id(int token_id, nbt_tok* tok, const int tok_len, nbt_parser* parser, char* str_2)
+static int nbt_cmp_tok_id(int token_id, nbt_tok* tok, const int tok_len, nbt_parser* parser, char* str_2)
 {
     if (nbt_tok_return_type(tok, token_id, tok_len) != nbt_identifier) return false;
 
@@ -48,24 +48,9 @@ static bool nbt_cmp_tok_id(int token_id, nbt_tok* tok, const int tok_len, nbt_pa
     }
 
     unsigned short str_len = char_to_ushort(_str_len);
-
-    bool result = true;
-
-    for (size_t i = 0; i < str_len; i++)
-    {
-        char char_1 = parser->nbt_data->content[nbt_tok_return_start(tok, token_id, tok_len) + 2 + i];
-        
-        char char_2 = str_2[i];
-
-        if (char_1 != char_2) {
-            result = false;
-            break;
-        }
-
-        if (char_1 == '\0' || char_2 == '\0') break;
-    }
-    
-    return result;  
+   
+    char* source_str = parser->nbt_data->content + nbt_tok_return_start(tok, token_id, tok_len) + 2;
+    return strncmp(source_str, str_2, str_len);
 }
 
 
@@ -86,12 +71,12 @@ int nbt_find(nbt_tok* tok, const int tok_len, nbt_parser* parser, struct nbt_loo
             int id = nbt_get_identifier_index(i, tok, tok_len);
             if (id == NBT_WARN) continue;
 
-            if (!nbt_cmp_tok_id(id, tok, tok_len, parser, path[current_path].name)) continue;
+            if (nbt_cmp_tok_id(id, tok, tok_len, parser, path[current_path].name)) continue;
 
             current_path++;
             parent_index = i;
         }
-        else{ // Current token is in a list
+        else { // Current token is in a list
             /* Check the number of tokens to skip */
 
             // debug("List detected. Current path %d");

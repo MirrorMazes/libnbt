@@ -104,7 +104,7 @@ static int nbt_get_primitive_len(const struct nbt_parser *parser, const nbt_type
             break;
         }
         default:
-            log_err("Unimplemented bytecode %d, or the nbt file has been corrupted", type);
+            return 0;
     }
     return len;
 }
@@ -129,7 +129,7 @@ static int nbt_parse_simple_data(struct nbt_parser* parser, nbt_tok* tok, const 
     int id_len = nbt_get_identifier_len(parser);
 
     nbt_tok id_payload = {.type = nbt_identifier, .start = parser->current_byte, .end = parser->current_byte + id_len - 1, .len = id_len, .parent = parser->parent_token};
-    if (nbt_add_token(tok, tok_len, parser->current_token, &id_payload)) return 1;
+    if (nbt_add_token(tok, tok_len, parser->current_token, &id_payload)) return NBT_NOMEM;
 
     parser->current_token++;
     parser->current_byte += id_len;
@@ -137,9 +137,10 @@ static int nbt_parse_simple_data(struct nbt_parser* parser, nbt_tok* tok, const 
 
     /* Get primitve in the data */
     int pr_len = nbt_get_primitive_len(parser, current_type);
+    if (0 == pr_len) return NBT_WARN;
 
     nbt_tok pr_payload = {.type = nbt_primitive, .start = parser->current_byte, .end = parser->current_byte + pr_len - 1, .len = pr_len, .parent = parser->parent_token};
-    if (nbt_add_token(tok, tok_len, parser->current_token, &pr_payload)) return 1;
+    if (nbt_add_token(tok, tok_len, parser->current_token, &pr_payload)) return NBT_NOMEM;
 
     parser->current_token++;
     parser->current_byte += pr_len;
@@ -147,7 +148,7 @@ static int nbt_parse_simple_data(struct nbt_parser* parser, nbt_tok* tok, const 
 
     /* Fill the ID token */
     nbt_tok _payload = {.type = current_type, .start = parser->current_byte - total_len, .end = parser->current_byte - 1, .len = total_len, .parent = sup_token};
-    if (nbt_add_token(tok, tok_len, parser->parent_token, &_payload)) return 1;
+    if (nbt_add_token(tok, tok_len, parser->parent_token, &_payload)) return NBT_NOMEM;
 
     parser->parent_token = sup_token; // Set parent token back to the original
 
@@ -165,9 +166,10 @@ static int nbt_parse_element(struct nbt_parser* parser, nbt_type_t current_type,
 
     /* Get primitve in the data */
     int pr_len = nbt_get_primitive_len(parser, current_type);
+    if (0 == pr_len) return NBT_WARN;
 
     nbt_tok pr_payload = {.type = nbt_primitive, .start = parser->current_byte, .end = parser->current_byte + pr_len - 1, .len = pr_len, .parent = parser->parent_token};
-    if (nbt_add_token(tok, tok_len, parser->current_token, &pr_payload)) return 1;
+    if (nbt_add_token(tok, tok_len, parser->current_token, &pr_payload)) return NBT_NOMEM;
 
     parser->current_token++;
     parser->current_byte += pr_len;
@@ -176,7 +178,7 @@ static int nbt_parse_element(struct nbt_parser* parser, nbt_type_t current_type,
 
     /* Fill the ID token */
     nbt_tok _payload = {.type = current_type, .start = parser->current_byte - total_len, .end = parser->current_byte - 1, .len = total_len, .parent = sup_token};
-    if (nbt_add_token(tok, tok_len, parser->parent_token, &_payload)) return 1;
+    if (nbt_add_token(tok, tok_len, parser->parent_token, &_payload)) return NBT_NOMEM;
 
     parser->parent_token = sup_token; // Set parent token back to the original
 
@@ -253,7 +255,7 @@ static int nbt_parse_list_start(struct nbt_parser* parser, nbt_tok* tok, const i
     /* Get Metadata for the list */
     struct nbt_metadata meta = get_nbt_metadata(parser);
     if (parser->list_meta[parser->cur_index].type != nbt_end) parser->cur_index++;
-    parser->list_meta = nbt_add_meta(parser->list_meta, parser->cur_index, parser, &meta, parser->setting->list_meta_expand_len);
+    if (nbt_add_meta(parser->cur_index, parser, &meta)) return NBT_LNOMEM;
 
     return 0;
 }
@@ -267,7 +269,7 @@ static int nbt_parse_element_list_start(struct nbt_parser* parser, nbt_tok* tok,
     parser->current_token++;
 
     struct nbt_metadata meta = get_nbt_metadata(parser);
-    parser->list_meta = nbt_add_meta(parser->list_meta, parser->cur_index, parser, &meta, parser->setting->list_meta_expand_len);
+    if (nbt_add_meta(parser->cur_index, parser, &meta)) return NBT_LNOMEM;
 
     return 0;
 }
@@ -312,11 +314,13 @@ int nbt_tokenise(nbt_parser *parser, nbt_tok* tok, const int tok_len)
                 // debug("In %s: type id is %d", __FUNCTION__ , current_char);
                 
                 if (nbt_tok_return_type(tok, parser->parent_token, tok_len) == nbt_list) {
-                    if (nbt_parse_element(parser, current_char, tok, tok_len)) return NBT_NOMEM;
+                    int res = nbt_parse_element(parser, current_char, tok, tok_len);
+                    if (res) return res;
                     parser->list_meta[parser->cur_index].num_of_entries--;
                 }
                 else {
-                    if (nbt_parse_simple_data(parser, tok, tok_len)) return NBT_NOMEM;
+                    int res = nbt_parse_simple_data(parser, tok, tok_len);
+                    if (res) return res;
                 }
                 break;
             }
@@ -355,7 +359,6 @@ int nbt_tokenise(nbt_parser *parser, nbt_tok* tok, const int tok_len)
                 break;
             }
             default:
-                log_err("unknown byte %d, at position %d", current_char, parser->current_byte);
                 return NBT_WARN;
                 break;
         }

@@ -20,11 +20,13 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #define MAX_NAME_LEN 150
 
 #define NBT_WARN -5
 #define NBT_NOMEM -6
+#define NBT_LNOMEM -7
 
 typedef enum {
     nbt_end = 0,
@@ -65,10 +67,9 @@ struct nbt_index_t {
 
 struct nbt_parser_setting_t {
     const int list_meta_init_len;
-    const int list_meta_expand_len;
 
-    const int tok_init_len;
-    const int tok_expand_len;
+    void* (*alloc) (size_t size);
+    void (*free) (void* mem);
 };
 
 typedef struct nbt_parser nbt_parser;

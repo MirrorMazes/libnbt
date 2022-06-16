@@ -26,54 +26,6 @@
 #define NBT_NOT_AVAIL -3
 #define NBT_UNCHANGED -4
 
-#define NBT_TOK_DEFAULT_LEN 50
-#define NBT_TOK_DEFAULT_RESIZE_LEN 25
-#define NBT_META_DEFAULT_LEN 1
-#define NBT_META_DEFAULT_RESIZE_LEN 10
-
-//ansi
-#define RED "\e[0;31m"
-#define GRN "\e[0;32m"
-#define YEL "\e[0;33m"
-#define CYN "\e[0;36m"
-
-#define REDB "\e[41m"
-#define GRNB "\e[42m"
-#define YELB "\e[43m"
-#define CYNB "\e[46m"
-
-#define HWHT "\e[0;97m"
-
-#define ANSI_RESET "\e[0m"
-
-
-
-#ifdef NDBG
-#define debug(args, ...)
-#else
-#define debug(args, ...) \
-    fprintf(stdout, ANSI_RESET HWHT CYNB "DEBUG" ANSI_RESET " %s:%d: " CYN args ANSI_RESET"\n", __FILE__, __LINE__, ##__VA_ARGS__)
-#endif
-
-#ifndef NLOG
-
-#define log_err(args, ...) \
-    fprintf(stdout, ANSI_RESET HWHT REDB "[ERROR]" ANSI_RESET " %s:%d: " RED args ANSI_RESET"\n", __FILE__, __LINE__, ##__VA_ARGS__)
-
-#define log_warn(args, ...) \
-    fprintf(stdout, ANSI_RESET HWHT YELB "[WARN]" ANSI_RESET " %s:%d: " YEL args ANSI_RESET"\n", __FILE__, __LINE__, ##__VA_ARGS__)
-
-#define log_info(args, ...) \
-    fprintf(stdout, ANSI_RESET HWHT GRNB "[INFO]" ANSI_RESET " %s:%d: " GRN args ANSI_RESET"\n", __FILE__, __LINE__, ##__VA_ARGS__)
-
-#else
-#define log_err(args, ...)
-#define log_warn(args, ...)
-#define log_info(args, ...)
-#endif
-
-#define MAX_LOOKUP 20
-
 #define MAX_DEPTH 30
 
 enum nbtb_state_type {
@@ -158,6 +110,6 @@ int nbt_tok_return_end(nbt_tok* token, int index, int max);
 int nbt_tok_return_len(nbt_tok* token, int index, int max);
 int nbt_tok_return_parent(nbt_tok* token, int index, int max);
 
-struct nbt_metadata* nbt_add_meta(struct nbt_metadata* meta, int index, nbt_parser* parser, struct nbt_metadata* payload, const int meta_resize_len);
+int nbt_add_meta(int index, nbt_parser* parser, struct nbt_metadata* payload);
 
 int nbt_meta_return_entries(nbt_parser* parser, int index);
