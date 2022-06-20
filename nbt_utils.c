@@ -6,26 +6,6 @@
 #include <string.h>
 #include <byteswap.h>
 
-
-void* nbt_realloc(void* ptr, size_t new_len, size_t original_len)
-{
-    void* result = malloc(new_len);
-
-    if (!result) return result;
-
-    memset(result, 0, new_len);
-
-    if (new_len >= original_len) {
-        memcpy(result, ptr, original_len);
-    }
-    else {
-        memcpy(result, ptr, new_len);
-    }
-
-    free(ptr);
-    return result;
-}
-
 void swap_char_2(char* input, char* output)
 {
     output[0] = input[1];
@@ -191,16 +171,6 @@ static struct nbt_metadata* nbt_destroy_meta(struct nbt_metadata* meta, struct n
     parser->max_list = 0;
     return NULL;
 }
-
-static nbt_tok* nbt_init_token(const int init_len, struct nbt_parser* parser)
-{
-    nbt_tok* tok = calloc(sizeof(nbt_tok), init_len + 1);
-
-    if (tok == NULL) return NULL;
-
-    return tok;
-}
-
 
 int nbt_add_meta(int index, struct nbt_parser* parser, struct nbt_metadata* payload)
 {

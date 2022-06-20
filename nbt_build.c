@@ -281,7 +281,6 @@ int nbt_add_single(nbt_build* b, char* buf, const int buf_len, nbt_type_t type, 
 
 int nbt_add_char(nbt_build* b, char* buf, const int buf_len, char* name, const short name_len, char payload)
 {
-    int total_len = 0;
     char nbt_payload = payload;
 
     return nbt_add_single(b, buf, buf_len, nbt_byte, name, name_len, &nbt_payload, 1);

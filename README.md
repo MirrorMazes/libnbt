@@ -1,7 +1,12 @@
 # Libnbt
-A library to work with [NBT](https://wiki.vg/NBT), written in C.
+A lightweight library to work with [NBT](https://wiki.vg/NBT), written in C.
 
-This library is a WIP, and there may be bugs.
+This library does not parse the NBT data into a tree, like many other NBT library, as that might be expensive. Instead, this library parses NBT data into an array of tokens, which is allocated and managed by the user. This library does no allocation when building NBT data.
+
+This library is inspired by [jsmn](https://github.com/zserge/jsmn), [jsmn-find](https://github.com/lcsmuller/jsmn-find), and [json-build](https://github.com/lcsmuller/json-build).
+
+## Issues
+If you find any bugs, please make a ticket [here](https://todo.sr.ht/~azbantium/libnbt).
 
 ## Usage
 There are two parts to this library. nbt_build and nbt_find.
@@ -11,15 +16,15 @@ Only `libnbt.h` need to be included for both parts of the library.
 ## Nbt build
 This part of the library allows you to build NBT data structures.
 
-### Initialisation
+### `void nbt_init_build(nbt_build* b);`
 The initialisation function `void nbt_init_build(nbt_build* b);` must be called before using any functions in nbt_build.
 Since there is no heap allocation, no destroy or cleanup function needs to be called.
 
 Params:
 - `nbt_build* b`: The address of the nbt_build structure to be initialised.
 
-### Common parameters
-Most functionns in nbt_build start with `nbt_build* b, char* buf, const int buf_len`
+### Building NBT data
+Most functions in nbt_build has the parameters `nbt_build* b, char* buf, const int buf_len`
 
 - `nbt_build* b` refers to the nbt_build structure initialised with `nbt_init_build`
 - `char* buf` refers to the buffer to store the NBT data.
@@ -56,12 +61,12 @@ Returns:
 ## Nbt find
 This part of the library allows you to parse NBT data.
 
-### Initialisation and shutdown
-The function:
+### Initialisation
+The initialisation function:
 ```C
 void nbt_init_parser(nbt_parser* parser, struct nbt_sized_buffer* content, const struct nbt_parser_setting_t* setting);
 ```
-has to be called before any other parsing function here is called.
+has to be called before any other parsing function is called.
 
 Parameters:
 - `nbt_parser* parser`: The parser to be initialised
@@ -80,18 +85,19 @@ struct nbt_sized_buffer {
 ```C
 struct nbt_parser_setting_t {
     const int list_meta_init_len;
-    const int list_meta_expand_len;
 
-    const int tok_init_len;
-    const int tok_expand_len;
+    void* (*alloc) (size_t size);
+    void (*free) (void* mem);
 };
+
 ```
-`tok_init_len` and `tok_expand_len` is the number of tokens the parser will allocate and expand when there is no memory.
 
-`list_meta_init_len` and `list_meta_expand_len` is the list metadata the parser will allocate and expand.
+`list_meta_init_len` is the list metadata the parser will allocate. This essentially controls the depth the parser is able to go. (This only applies to lists)
 
+`alloc` and `free` is the dynamic allocation and free function used to allocate the list metadata. If this is NULL, malloc and free will be used.
 
-As parsing utilises the heap, a shutdown function must be called.
+### Shutdown
+This is the shutdown function
 
 ```C
 void nbt_destroy_parser(nbt_parser* parser);
@@ -105,18 +111,26 @@ To change the NBT data to be parsed without destroying the parser structure, the
 ### Parsing NBT
 To parse NBT, this function must be called:
 ```C
-int nbt_tokenise(nbt_parser *parser);
+int nbt_tokenise(nbt_parser* parser, nbt_tok* tok, const int tok_len);
 ```
-This function parse the NBT data stored in the `parser` and tokenises it.
+This function parse the NBT data stored in the `parser` by tokenising it.
 
 Parameters:
 - `parser`: the structure initialised by `nbt_init_parser`.
+- `tok`: the array of tokens to be used by the function. This token must be long enough for the NBT file.
+- `tok_len`: Number of nodes of the token.
 
-This function returns 0 if succeeded, returns `NBT_WARN` if the NBT data is invalid.
+Returns:
+- `0` if function exited correctly
+- `NBT_WARN` if NBT data is invalid
+- `NBT_NOMEM` if `tok` is not big enough.
+- `NBT_LNOMEM` if the list metadata is too small.
+
+### Finding NBT information
 
 To get the indexes of the NBT data, this function may be used:
 ```C
-int nbt_find(nbt_parser* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res);
+int nbt_find(nbt_tok* tok, const int tok_len, nbt_parser* parser, struct nbt_lookup_t* path, int path_size, struct nbt_index_t* res);
 ```
 If used on simple data structure that have no length prefix, like byte, int, long, float, etc, this function will return the exact location of the data.
 
@@ -125,12 +139,14 @@ If used on arrays, like byte array, strings, etc, this function will return the 
 if used on compounds or lists, this function will return everything related to the data, like the identifier byte, the name, and everything else included in the compound or list.
 
 Parameters:
+- `tok`: the array of tokens to be searched by the function.
+- `tok_len`: Number of nodes of the token.
 - `parser`: the structure initialised by `nbt_init_parser`.
 - `path`: array of the path to the data.
 - `path_size`: Number of elements in `path`.
 - `res`: The resultant index.
 
-Returns 0 if operation succeeded, `NBT_WARN` if unable to parse file.
+Returns 0 if operation succeeded, `NBT_WARN` if there is an error.
 
 Definitions:
 ```c
